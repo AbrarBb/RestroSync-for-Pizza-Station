@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
@@ -223,8 +224,7 @@ const Reservations = () => {
                   
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Special Requests (Optional)</label>
-                    <Input
-                      as="textarea"
+                    <Textarea
                       placeholder="Any special requests or requirements..."
                       value={specialRequests}
                       onChange={(e) => setSpecialRequests(e.target.value)}
