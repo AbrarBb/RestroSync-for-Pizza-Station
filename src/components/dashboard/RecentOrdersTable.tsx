@@ -26,7 +26,7 @@ const orders: Order[] = [
     items: "1× Margherita, 1× Garlic Breadsticks",
     status: "preparing",
     time: "10 min ago",
-    total: 18.98,
+    total: 1655.24, // Converted from 18.98 USD to BDT
   },
   {
     id: "ORD-5622",
@@ -34,7 +34,7 @@ const orders: Order[] = [
     items: "2× Pepperoni, 1× Caesar Salad",
     status: "pending",
     time: "15 min ago",
-    total: 37.97,
+    total: 3311.36, // Converted from 37.97 USD to BDT
   },
   {
     id: "ORD-5621",
@@ -42,7 +42,7 @@ const orders: Order[] = [
     items: "1× Vegetarian, 2× Soda",
     status: "ready",
     time: "25 min ago",
-    total: 20.97,
+    total: 1828.27, // Converted from 20.97 USD to BDT
   },
   {
     id: "ORD-5620",
@@ -50,7 +50,7 @@ const orders: Order[] = [
     items: "1× Margherita, 1× Pepperoni",
     status: "delivered",
     time: "35 min ago",
-    total: 27.98,
+    total: 2440.04, // Converted from 27.98 USD to BDT
   },
   {
     id: "ORD-5619",
@@ -58,7 +58,7 @@ const orders: Order[] = [
     items: "1× Vegetarian, 1× Garlic Breadsticks, 1× Iced Tea",
     status: "delivered",
     time: "45 min ago",
-    total: 24.97,
+    total: 2177.20, // Converted from 24.97 USD to BDT
   },
 ];
 
@@ -107,7 +107,7 @@ export function RecentOrdersTable() {
                 </Badge>
               </TableCell>
               <TableCell>{order.time}</TableCell>
-              <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
+              <TableCell className="text-right">৳{order.total.toFixed(2)}</TableCell>
               <TableCell className="text-right">
                 <Button variant="outline" size="sm">View</Button>
               </TableCell>

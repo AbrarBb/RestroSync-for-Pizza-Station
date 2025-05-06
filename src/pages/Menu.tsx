@@ -15,7 +15,7 @@ const menuItems = [
     category: "pizza",
     name: "Margherita",
     description: "Classic tomato sauce, mozzarella, and fresh basil",
-    price: 12.99,
+    price: 1132.91, // Converted from 12.99 USD to BDT
     image: "/placeholder.svg"
   },
   {
@@ -23,7 +23,7 @@ const menuItems = [
     category: "pizza",
     name: "Pepperoni",
     description: "Tomato sauce, mozzarella, and pepperoni",
-    price: 14.99,
+    price: 1307.13, // Converted from 14.99 USD to BDT
     image: "/placeholder.svg"
   },
   {
@@ -31,7 +31,7 @@ const menuItems = [
     category: "pizza",
     name: "Vegetarian",
     description: "Tomato sauce, mozzarella, bell peppers, mushrooms, onions",
-    price: 15.99,
+    price: 1394.13, // Converted from 15.99 USD to BDT
     image: "/placeholder.svg"
   },
   {
@@ -39,7 +39,7 @@ const menuItems = [
     category: "sides",
     name: "Garlic Breadsticks",
     description: "Freshly baked breadsticks with garlic butter",
-    price: 5.99,
+    price: 522.33, // Converted from 5.99 USD to BDT
     image: "/placeholder.svg"
   },
   {
@@ -47,7 +47,7 @@ const menuItems = [
     category: "sides",
     name: "Caesar Salad",
     description: "Romaine lettuce, croutons, parmesan cheese with Caesar dressing",
-    price: 7.99,
+    price: 696.55, // Converted from 7.99 USD to BDT
     image: "/placeholder.svg"
   },
   {
@@ -55,7 +55,7 @@ const menuItems = [
     category: "drinks",
     name: "Soda",
     description: "Your choice of Coke, Sprite, or Fanta",
-    price: 2.49,
+    price: 217.07, // Converted from 2.49 USD to BDT
     image: "/placeholder.svg"
   },
   {
@@ -63,7 +63,7 @@ const menuItems = [
     category: "drinks",
     name: "Iced Tea",
     description: "Freshly brewed iced tea",
-    price: 2.99,
+    price: 260.74, // Converted from 2.99 USD to BDT
     image: "/placeholder.svg"
   }
 ];
@@ -224,7 +224,7 @@ const Menu = () => {
                       <div key={item.id} className="flex justify-between items-center">
                         <div className="flex-grow">
                           <p className="font-medium">{item.name}</p>
-                          <p className="text-sm text-gray-500">${item.price.toFixed(2)} × {item.quantity}</p>
+                          <p className="text-sm text-gray-500">৳{item.price.toFixed(2)} × {item.quantity}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <Button 
@@ -251,15 +251,15 @@ const Menu = () => {
                     <div className="border-t pt-4 mt-4">
                       <div className="flex justify-between font-medium">
                         <span>Subtotal</span>
-                        <span>${cartTotal.toFixed(2)}</span>
+                        <span>৳{cartTotal.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-sm text-gray-500 mt-1">
                         <span>Tax (7%)</span>
-                        <span>${(cartTotal * 0.07).toFixed(2)}</span>
+                        <span>৳{(cartTotal * 0.07).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between font-bold text-lg mt-2">
                         <span>Total</span>
-                        <span>${(cartTotal * 1.07).toFixed(2)}</span>
+                        <span>৳{(cartTotal * 1.07).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -317,7 +317,7 @@ const MenuItemCard = ({ item, onAddToCart }: MenuItemProps) => {
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-2">
           <h3 className="font-bold">{item.name}</h3>
-          <span className="font-bold">${item.price.toFixed(2)}</span>
+          <span className="font-bold">৳{item.price.toFixed(2)}</span>
         </div>
         <p className="text-gray-600 text-sm mb-4">{item.description}</p>
       </CardContent>
