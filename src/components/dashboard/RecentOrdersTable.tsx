@@ -9,6 +9,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
+import { 
+  Eye,
+  Truck, 
+  MapPin
+} from "lucide-react";
 
 interface Order {
   id: string;
@@ -17,6 +23,11 @@ interface Order {
   status: "pending" | "preparing" | "ready" | "delivered";
   time: string;
   total: number;
+  delivery?: {
+    address: string;
+    rider?: string;
+    method: "delivery" | "pickup" | "dine-in";
+  };
 }
 
 const orders: Order[] = [
@@ -26,7 +37,12 @@ const orders: Order[] = [
     items: "1× Margherita, 1× Garlic Breadsticks",
     status: "preparing",
     time: "10 min ago",
-    total: 1655.24, // Converted from 18.98 USD to BDT
+    total: 1655.24,
+    delivery: {
+      method: "delivery",
+      address: "123 Main St, Apt 4B",
+      rider: "Ahmed K.",
+    },
   },
   {
     id: "ORD-5622",
@@ -34,7 +50,11 @@ const orders: Order[] = [
     items: "2× Pepperoni, 1× Caesar Salad",
     status: "pending",
     time: "15 min ago",
-    total: 3311.36, // Converted from 37.97 USD to BDT
+    total: 3311.36,
+    delivery: {
+      method: "pickup",
+      address: "Store Pickup",
+    },
   },
   {
     id: "ORD-5621",
@@ -42,7 +62,11 @@ const orders: Order[] = [
     items: "1× Vegetarian, 2× Soda",
     status: "ready",
     time: "25 min ago",
-    total: 1828.27, // Converted from 20.97 USD to BDT
+    total: 1828.27,
+    delivery: {
+      method: "dine-in",
+      address: "Table 8",
+    },
   },
   {
     id: "ORD-5620",
@@ -50,7 +74,12 @@ const orders: Order[] = [
     items: "1× Margherita, 1× Pepperoni",
     status: "delivered",
     time: "35 min ago",
-    total: 2440.04, // Converted from 27.98 USD to BDT
+    total: 2440.04,
+    delivery: {
+      method: "delivery",
+      address: "456 Park Ave",
+      rider: "Rahul M.",
+    },
   },
   {
     id: "ORD-5619",
@@ -58,7 +87,11 @@ const orders: Order[] = [
     items: "1× Vegetarian, 1× Garlic Breadsticks, 1× Iced Tea",
     status: "delivered",
     time: "45 min ago",
-    total: 2177.20, // Converted from 24.97 USD to BDT
+    total: 2177.20,
+    delivery: {
+      method: "pickup",
+      address: "Store Pickup",
+    },
   },
 ];
 
@@ -78,6 +111,26 @@ export function RecentOrdersTable() {
     }
   };
 
+  const getDeliveryMethodIcon = (method: string) => {
+    switch (method) {
+      case "delivery":
+        return <Truck className="h-4 w-4 text-blue-600" />;
+      case "pickup":
+        return <MapPin className="h-4 w-4 text-green-600" />;
+      case "dine-in":
+        return <MapPin className="h-4 w-4 text-purple-600" />;
+      default:
+        return null;
+    }
+  };
+
+  const handleViewOrder = (order: Order) => {
+    toast({
+      title: `Order ${order.id}`,
+      description: `Viewing details for ${order.customer}'s order`,
+    });
+  };
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -87,6 +140,7 @@ export function RecentOrdersTable() {
             <TableHead>Customer</TableHead>
             <TableHead>Items</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Delivery</TableHead>
             <TableHead>Time</TableHead>
             <TableHead className="text-right">Total</TableHead>
             <TableHead className="text-right">Action</TableHead>
@@ -106,10 +160,27 @@ export function RecentOrdersTable() {
                   {order.status}
                 </Badge>
               </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1">
+                  {order.delivery && getDeliveryMethodIcon(order.delivery.method)}
+                  <span className="text-xs">
+                    {order.delivery?.method === "delivery" 
+                      ? `${order.delivery.address} (${order.delivery.rider})` 
+                      : order.delivery?.address}
+                  </span>
+                </div>
+              </TableCell>
               <TableCell>{order.time}</TableCell>
               <TableCell className="text-right">৳{order.total.toFixed(2)}</TableCell>
               <TableCell className="text-right">
-                <Button variant="outline" size="sm">View</Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleViewOrder(order)}
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  View
+                </Button>
               </TableCell>
             </TableRow>
           ))}
