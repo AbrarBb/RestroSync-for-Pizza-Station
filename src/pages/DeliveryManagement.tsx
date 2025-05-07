@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Search, Truck, MapPin, User, Phone, Clock } from "lucide-react";
+import { Search, Truck, MapPin, User, Phone, Clock, Plus } from "lucide-react";
 
 interface DeliveryRider {
   id: number;

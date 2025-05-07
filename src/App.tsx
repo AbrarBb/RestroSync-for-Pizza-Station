@@ -16,8 +16,16 @@ import Customers from "./pages/Customers";
 import Staff from "./pages/Staff";
 import MenuManagement from "./pages/MenuManagement";
 import DeliveryManagement from "./pages/DeliveryManagement";
+import { AuthProvider } from "./contexts/AuthContext";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -25,20 +33,22 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/menu" element={<Menu />} />
-          <Route path="/reservations" element={<Reservations />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/menu-management" element={<MenuManagement />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/customers" element={<Customers />} />
-          <Route path="/staff" element={<Staff />} />
-          <Route path="/delivery" element={<DeliveryManagement />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/menu" element={<Menu />} />
+            <Route path="/reservations" element={<Reservations />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/menu-management" element={<MenuManagement />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/staff" element={<Staff />} />
+            <Route path="/delivery" element={<DeliveryManagement />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
