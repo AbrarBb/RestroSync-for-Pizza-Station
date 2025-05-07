@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Search, Plus, Users, Calendar } from "lucide-react";
+import { Search, Plus, Users, Calendar, Shield } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StaffMember {
   id: number;
@@ -103,6 +103,31 @@ const Staff = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { isAdmin } = useAuth();
+  
+  // Redirect or show error if not admin - this is an extra layer of protection
+  // since we already use ProtectedRoute in App.tsx
+  if (!isAdmin()) {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <Shield className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Admin access required</h3>
+                <p className="text-sm text-red-700 mt-2">
+                  Only administrators can access the staff management page.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
   
   const filteredStaff = staffMembers.filter((staff) => {
     const matchesSearch = 
@@ -141,6 +166,21 @@ const Staff = () => {
     <DashboardLayout>
       <div className="p-6">
         <h1 className="text-3xl font-bold tracking-tight mb-6">Staff Management</h1>
+        
+        {/* Admin notice */}
+        <div className="bg-purple-50 border border-purple-200 rounded-md p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <Shield className="h-5 w-5 text-purple-400" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-purple-800">Admin Access</h3>
+              <p className="text-sm text-purple-700 mt-2">
+                You're viewing this page as an administrator. Only admins can manage staff members.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mb-6">

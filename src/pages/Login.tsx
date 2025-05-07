@@ -5,44 +5,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/hooks/use-toast";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useAuth, UserRole } from "@/contexts/AuthContext";
+import { Separator } from "@/components/ui/separator";
+import { Shield, User } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const { signIn, signUp, isLoading } = useAuth();
+  const [selectedRole, setSelectedRole] = useState<UserRole>("customer");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate login process
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Login Successful",
-        description: "Welcome back to Pizza Station!",
-      });
-      navigate("/dashboard");
-    }, 1500);
+    await signIn(email, password, selectedRole);
   };
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate sign-up process
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Account Created",
-        description: "Your account has been created successfully!",
-      });
-      navigate("/dashboard");
-    }, 1500);
+    await signUp(email, password, selectedRole);
   };
 
   return (
@@ -96,6 +78,30 @@ const Login = () => {
                       required
                     />
                   </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Login As</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        type="button" 
+                        variant={selectedRole === "customer" ? "default" : "outline"}
+                        className="flex items-center justify-center gap-2"
+                        onClick={() => setSelectedRole("customer")}
+                      >
+                        <User size={16} />
+                        Customer
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant={selectedRole === "admin" ? "default" : "outline"}
+                        className="flex items-center justify-center gap-2"
+                        onClick={() => setSelectedRole("admin")}
+                      >
+                        <Shield size={16} />
+                        Admin
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
                 <CardFooter>
                   <Button type="submit" className="w-full" disabled={isLoading}>
@@ -139,6 +145,35 @@ const Login = () => {
                       onChange={(e) => setPassword(e.target.value)} 
                       required
                     />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Register As</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        type="button" 
+                        variant={selectedRole === "customer" ? "default" : "outline"}
+                        className="flex items-center justify-center gap-2"
+                        onClick={() => setSelectedRole("customer")}
+                      >
+                        <User size={16} />
+                        Customer
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant={selectedRole === "admin" ? "default" : "outline"}
+                        className="flex items-center justify-center gap-2"
+                        onClick={() => setSelectedRole("admin")}
+                      >
+                        <Shield size={16} />
+                        Admin
+                      </Button>
+                    </div>
+                    {selectedRole === "admin" && (
+                      <p className="text-xs text-muted-foreground">
+                        Note: Admin accounts require additional verification by system administrators.
+                      </p>
+                    )}
                   </div>
                 </CardContent>
                 <CardFooter>

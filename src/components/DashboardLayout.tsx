@@ -3,6 +3,7 @@ import { ReactNode, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Home,
   Menu,
@@ -23,13 +24,10 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
+  const { signOut, isAdmin, userRole } = useAuth();
 
   const handleLogout = () => {
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
-    navigate("/login");
+    signOut();
   };
 
   return (
@@ -99,6 +97,17 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               label="Inventory"
               isOpen={isSidebarOpen}
             />
+            
+            {/* Only show Staff Management to admins */}
+            {isAdmin() && (
+              <NavItem
+                to="/staff"
+                icon={<Users />}
+                label="Staff Management"
+                isOpen={isSidebarOpen}
+              />
+            )}
+            
             <NavItem
               to="/settings"
               icon={<Settings />}
@@ -107,6 +116,18 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             />
           </ul>
         </nav>
+
+        {/* User Role Badge */}
+        {userRole && isSidebarOpen && (
+          <div className="px-4 py-2">
+            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium 
+              ${userRole === "admin" ? "bg-purple-100 text-purple-800" : 
+                userRole === "staff" ? "bg-blue-100 text-blue-800" : 
+                "bg-green-100 text-green-800"}`}>
+              {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+            </span>
+          </div>
+        )}
 
         {/* User */}
         <div className="border-t p-4">
@@ -152,8 +173,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               </div>
               {isSidebarOpen && (
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium">Admin User</span>
-                  <span className="text-xs text-gray-500">admin@example.com</span>
+                  <span className="text-sm font-medium">
+                    {userRole === "admin" ? "Admin User" : 
+                     userRole === "staff" ? "Staff User" : "Customer"}
+                  </span>
                 </div>
               )}
             </div>

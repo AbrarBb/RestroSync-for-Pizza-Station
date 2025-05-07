@@ -5,14 +5,18 @@ import { getSupabase } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 
+export type UserRole = "admin" | "staff" | "customer";
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  userRole: UserRole | null;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, role?: UserRole) => Promise<void>;
+  signUp: (email: string, password: string, role?: UserRole) => Promise<void>;
   signOut: () => Promise<void>;
   isSupabaseConnected: boolean;
+  isAdmin: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,6 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
   const navigate = useNavigate();
@@ -33,6 +38,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Get user role from local storage if exists
+        if (session?.user) {
+          const storedRole = localStorage.getItem(`userRole_${session.user.id}`);
+          setUserRole(storedRole as UserRole || "customer");
+        }
+        
         setIsLoading(false);
       });
 
@@ -41,6 +53,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         (_event, session) => {
           setSession(session);
           setUser(session?.user ?? null);
+          
+          // Get user role when auth state changes
+          if (session?.user) {
+            const storedRole = localStorage.getItem(`userRole_${session.user.id}`);
+            setUserRole(storedRole as UserRole || "customer");
+          } else {
+            setUserRole(null);
+          }
+          
           setIsLoading(false);
         }
       );
@@ -53,22 +74,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, role: UserRole = "customer") => {
     try {
       setIsLoading(true);
       const supabase = getSupabase();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
         throw error;
       }
       
-      toast({
-        title: "Welcome back!",
-        description: "You've successfully signed in.",
-      });
-      
-      navigate("/dashboard");
+      if (data.user) {
+        // Store role in local storage
+        localStorage.setItem(`userRole_${data.user.id}`, role);
+        setUserRole(role);
+        
+        toast({
+          title: "Welcome back!",
+          description: `You've successfully signed in as ${role}.`,
+        });
+        
+        navigate("/dashboard");
+      }
     } catch (error: any) {
       toast({
         title: "Sign in failed",
@@ -80,20 +107,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, role: UserRole = "customer") => {
     try {
       setIsLoading(true);
       const supabase = getSupabase();
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({ email, password });
       
       if (error) {
         throw error;
       }
       
-      toast({
-        title: "Account created",
-        description: "Please check your email for verification.",
-      });
+      if (data.user) {
+        // Store role in local storage
+        localStorage.setItem(`userRole_${data.user.id}`, role);
+        setUserRole(role);
+        
+        toast({
+          title: "Account created",
+          description: "Please check your email for verification.",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Sign up failed",
@@ -109,6 +142,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const supabase = getSupabase();
       await supabase.auth.signOut();
+      // Clear role from local storage
+      if (user?.id) {
+        localStorage.removeItem(`userRole_${user.id}`);
+      }
+      setUserRole(null);
       toast({
         title: "Signed out",
         description: "You've been successfully signed out.",
@@ -123,9 +161,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const isAdmin = () => userRole === "admin";
+
   return (
     <AuthContext.Provider
-      value={{ user, session, isLoading, signIn, signUp, signOut, isSupabaseConnected }}
+      value={{ 
+        user, 
+        session, 
+        userRole,
+        isLoading, 
+        signIn, 
+        signUp, 
+        signOut, 
+        isSupabaseConnected,
+        isAdmin 
+      }}
     >
       {children}
     </AuthContext.Provider>

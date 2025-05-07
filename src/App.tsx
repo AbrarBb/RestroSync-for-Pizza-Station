@@ -17,6 +17,7 @@ import Staff from "./pages/Staff";
 import MenuManagement from "./pages/MenuManagement";
 import DeliveryManagement from "./pages/DeliveryManagement";
 import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,15 +38,51 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/menu" element={<Menu />} />
-            <Route path="/reservations" element={<Reservations />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/menu-management" element={<MenuManagement />} />
-            <Route path="/inventory" element={<Inventory />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/staff" element={<Staff />} />
-            <Route path="/delivery" element={<DeliveryManagement />} />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/menu" element={
+              <ProtectedRoute>
+                <Menu />
+              </ProtectedRoute>
+            } />
+            <Route path="/reservations" element={
+              <ProtectedRoute>
+                <Reservations />
+              </ProtectedRoute>
+            } />
+            <Route path="/orders" element={
+              <ProtectedRoute>
+                <Orders />
+              </ProtectedRoute>
+            } />
+            <Route path="/menu-management" element={
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                <MenuManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/inventory" element={
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                <Inventory />
+              </ProtectedRoute>
+            } />
+            <Route path="/customers" element={
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                <Customers />
+              </ProtectedRoute>
+            } />
+            <Route path="/staff" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <Staff />
+              </ProtectedRoute>
+            } />
+            <Route path="/delivery" element={
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                <DeliveryManagement />
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
