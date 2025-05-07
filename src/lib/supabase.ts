@@ -5,16 +5,28 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Create a mock client for development when credentials aren't available
+const mockSupabaseClient = {
+  auth: {
+    getSession: () => Promise.resolve({ data: { session: null } }),
+    onAuthStateChange: () => {
+      return { data: { subscription: { unsubscribe: () => {} } } };
+    },
+    signInWithPassword: () => Promise.resolve({ data: {}, error: null }),
+    signUp: () => Promise.resolve({ data: {}, error: null }),
+    signOut: () => Promise.resolve({ error: null }),
+  },
+  // Add other mock methods as needed
+};
+
 // Create a single supabase client for the entire app
 export const supabase = supabaseUrl && supabaseAnonKey 
   ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+  : mockSupabaseClient as any;
 
-// Fallback function to handle when Supabase is not initialized
+// Function to handle when Supabase is not initialized
 export const getSupabase = () => {
-  if (!supabase) {
-    throw new Error('Supabase client not initialized. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
-  }
+  console.log("Getting Supabase client (real or mock)");
   return supabase;
 };
 

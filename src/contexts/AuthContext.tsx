@@ -32,6 +32,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const supabase = getSupabase();
+      
+      // If we're using a mock client, we'll handle auth differently
+      const isMockClient = !import.meta.env.VITE_SUPABASE_URL;
+      
+      if (isMockClient) {
+        console.log("Using mock authentication (no Supabase credentials)");
+        setIsSupabaseConnected(false);
+        
+        // Check local storage for session info
+        const storedUser = localStorage.getItem('mockUser');
+        const storedRole = localStorage.getItem('mockUserRole');
+        
+        if (storedUser && storedRole) {
+          // Mock user object
+          const mockUser = JSON.parse(storedUser);
+          setUser(mockUser);
+          setUserRole(storedRole as UserRole);
+        }
+        
+        setIsLoading(false);
+        return;
+      }
+      
+      // For real Supabase client
       setIsSupabaseConnected(true);
       
       // Get initial session
@@ -78,6 +102,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       const supabase = getSupabase();
+      
+      // If we're using a mock client, handle auth manually
+      if (!import.meta.env.VITE_SUPABASE_URL) {
+        // Create a mock user
+        const mockUser = {
+          id: `mock-${Date.now()}`,
+          email: email,
+          created_at: new Date().toISOString(),
+        };
+        
+        // Store in localStorage
+        localStorage.setItem('mockUser', JSON.stringify(mockUser));
+        localStorage.setItem('mockUserRole', role);
+        
+        setUser(mockUser as any);
+        setUserRole(role);
+        
+        toast({
+          title: "Welcome back!",
+          description: `You've successfully signed in as ${role}.`,
+        });
+        
+        navigate("/dashboard");
+        return;
+      }
+      
+      // For real Supabase client
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
@@ -111,6 +162,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       const supabase = getSupabase();
+      
+      // If we're using a mock client, handle auth manually
+      if (!import.meta.env.VITE_SUPABASE_URL) {
+        // Create a mock user
+        const mockUser = {
+          id: `mock-${Date.now()}`,
+          email: email,
+          created_at: new Date().toISOString(),
+        };
+        
+        // Store in localStorage
+        localStorage.setItem('mockUser', JSON.stringify(mockUser));
+        localStorage.setItem('mockUserRole', role);
+        
+        setUser(mockUser as any);
+        setUserRole(role);
+        
+        toast({
+          title: "Account created",
+          description: "Your account has been created successfully.",
+        });
+        
+        navigate("/dashboard");
+        return;
+      }
+      
+      // For real Supabase client
       const { data, error } = await supabase.auth.signUp({ email, password });
       
       if (error) {
@@ -141,6 +219,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       const supabase = getSupabase();
+      
+      // If we're using a mock client, handle auth manually
+      if (!import.meta.env.VITE_SUPABASE_URL) {
+        localStorage.removeItem('mockUser');
+        localStorage.removeItem('mockUserRole');
+        setUser(null);
+        setUserRole(null);
+        
+        toast({
+          title: "Signed out",
+          description: "You've been successfully signed out.",
+        });
+        
+        navigate("/login");
+        return;
+      }
+      
+      // For real Supabase client
       await supabase.auth.signOut();
       // Clear role from local storage
       if (user?.id) {

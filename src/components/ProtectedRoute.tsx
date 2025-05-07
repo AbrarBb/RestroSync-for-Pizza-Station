@@ -2,6 +2,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,7 +14,12 @@ const ProtectedRoute = ({ children, allowedRoles = ["admin", "staff", "customer"
   
   // Show loading state
   if (isLoading) {
-    return <div className="h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="h-screen flex flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-2 text-muted-foreground">Loading...</p>
+      </div>
+    );
   }
   
   // Check if user is authenticated
