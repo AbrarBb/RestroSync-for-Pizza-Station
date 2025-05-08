@@ -4,6 +4,10 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Create a mock storage for development when credentials aren't available
+const mockMenuItems: MenuItem[] = [];
+const mockOrders: Order[] = [];
+
 // Create a mock client for development when credentials aren't available
 const mockSupabaseClient = {
   auth: {
@@ -15,30 +19,135 @@ const mockSupabaseClient = {
     signUp: () => Promise.resolve({ data: {}, error: null }),
     signOut: () => Promise.resolve({ error: null }),
   },
-  from: () => ({
-    select: () => ({
-      eq: () => ({
-        single: () => Promise.resolve({ data: null, error: null }),
+  from: (tableName: string) => {
+    if (tableName === 'menu_items') {
+      return {
+        select: () => ({
+          eq: (field: string, value: string) => ({
+            single: () => {
+              const item = mockMenuItems.find(item => item[field as keyof MenuItem] === value);
+              return Promise.resolve({ data: item || null, error: null });
+            },
+            order: () => ({
+              limit: (limit: number) => {
+                const items = mockMenuItems.filter(item => item[field as keyof MenuItem] === value);
+                return Promise.resolve({ data: items.slice(0, limit), error: null });
+              }
+            })
+          }),
+          order: () => ({
+            limit: (limit: number) => {
+              return Promise.resolve({ 
+                data: limit ? mockMenuItems.slice(0, limit) : [...mockMenuItems], 
+                error: null 
+              });
+            }
+          })
+        }),
+        insert: (items: Omit<MenuItem, 'id'>[]) => {
+          const newItems = items.map(item => ({
+            ...item,
+            id: `mock-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            created_at: new Date().toISOString(),
+          })) as MenuItem[];
+          
+          mockMenuItems.push(...newItems);
+          return Promise.resolve({ data: newItems, error: null });
+        },
+        update: (item: Partial<MenuItem>) => ({
+          eq: (field: string, value: string) => {
+            const index = mockMenuItems.findIndex(i => i[field as keyof MenuItem] === value);
+            if (index !== -1) {
+              mockMenuItems[index] = { ...mockMenuItems[index], ...item };
+            }
+            return Promise.resolve({ data: mockMenuItems[index] || null, error: null });
+          }
+        }),
+        delete: () => ({
+          eq: (field: string, value: string) => {
+            const index = mockMenuItems.findIndex(i => i[field as keyof MenuItem] === value);
+            if (index !== -1) {
+              mockMenuItems.splice(index, 1);
+            }
+            return Promise.resolve({ data: null, error: null });
+          }
+        }),
+      };
+    } else if (tableName === 'orders') {
+      return {
+        select: () => ({
+          eq: (field: string, value: string) => ({
+            single: () => {
+              const order = mockOrders.find(order => order[field as keyof Order] === value);
+              return Promise.resolve({ data: order || null, error: null });
+            },
+            order: () => ({
+              limit: (limit: number) => {
+                const orders = mockOrders.filter(order => order[field as keyof Order] === value);
+                return Promise.resolve({ data: orders.slice(0, limit), error: null });
+              }
+            })
+          }),
+          order: () => ({
+            limit: (limit: number) => {
+              return Promise.resolve({ 
+                data: limit ? mockOrders.slice(0, limit) : [...mockOrders], 
+                error: null 
+              });
+            }
+          })
+        }),
+        insert: (items: Omit<Order, 'id'>[]) => {
+          const newOrders = items.map(order => ({
+            ...order,
+            id: `mock-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            created_at: new Date().toISOString(),
+          })) as Order[];
+          
+          mockOrders.push(...newOrders);
+          return Promise.resolve({ data: newOrders, error: null });
+        },
+        update: (order: Partial<Order>) => ({
+          eq: (field: string, value: string) => {
+            const index = mockOrders.findIndex(o => o[field as keyof Order] === value);
+            if (index !== -1) {
+              mockOrders[index] = { ...mockOrders[index], ...order };
+            }
+            return Promise.resolve({ data: mockOrders[index] || null, error: null });
+          }
+        }),
+      };
+    }
+    return {
+      select: () => ({
+        eq: () => ({
+          single: () => Promise.resolve({ data: null, error: null }),
+          order: () => ({
+            limit: () => Promise.resolve({ data: [], error: null })
+          })
+        }),
         order: () => ({
           limit: () => Promise.resolve({ data: [], error: null })
         })
       }),
-      order: () => ({
-        limit: () => Promise.resolve({ data: [], error: null })
-      })
-    }),
-    insert: () => Promise.resolve({ data: null, error: null }),
-    update: () => ({
-      eq: () => Promise.resolve({ data: null, error: null })
-    }),
-    delete: () => ({
-      eq: () => Promise.resolve({ data: null, error: null })
-    }),
-  }),
+      insert: () => Promise.resolve({ data: null, error: null }),
+      update: () => ({
+        eq: () => Promise.resolve({ data: null, error: null })
+      }),
+      delete: () => ({
+        eq: () => Promise.resolve({ data: null, error: null })
+      }),
+    };
+  },
   storage: {
     from: () => ({
-      upload: () => Promise.resolve({ data: null, error: null }),
-      getPublicUrl: () => ({ data: { publicUrl: '' } }),
+      upload: (path: string, file: File) => {
+        // Mock successful upload
+        return Promise.resolve({ data: { path }, error: null });
+      },
+      getPublicUrl: (path: string) => ({ 
+        data: { publicUrl: `https://mock-storage.example.com/${path}` } 
+      }),
     }),
   },
 };
@@ -144,6 +253,7 @@ export type InventoryItem = {
 // Database service for menu items
 export const menuItemsService = {
   getAll: async () => {
+    console.log("Fetching all menu items");
     const { data, error } = await supabase
       .from('menu_items')
       .select('*')
@@ -154,6 +264,7 @@ export const menuItemsService = {
       return [];
     }
     
+    console.log("Retrieved menu items:", data);
     return data || [];
   },
   
@@ -188,6 +299,7 @@ export const menuItemsService = {
   },
   
   create: async (item: Omit<MenuItem, 'id' | 'created_at'>) => {
+    console.log("Creating menu item:", item);
     const { data, error } = await supabase
       .from('menu_items')
       .insert([item]);
@@ -197,6 +309,7 @@ export const menuItemsService = {
       throw error;
     }
     
+    console.log("Created menu item:", data);
     return data;
   },
   
@@ -229,6 +342,7 @@ export const menuItemsService = {
   },
 
   uploadImage: async (file: File, path: string) => {
+    console.log("Uploading image:", path);
     const { data, error } = await supabase.storage
       .from('menu_images')
       .upload(path, file);
@@ -242,6 +356,7 @@ export const menuItemsService = {
       .from('menu_images')
       .getPublicUrl(path);
     
+    console.log("Image URL:", urlData.publicUrl);
     return urlData.publicUrl;
   }
 };

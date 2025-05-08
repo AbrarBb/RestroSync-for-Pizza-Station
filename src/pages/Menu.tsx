@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -32,10 +31,15 @@ const Menu = () => {
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
 
-  // Fetch menu items
-  const { data: menuItems = [], isLoading } = useQuery({
+  // Fetch menu items with better error handling
+  const { data: menuItems = [], isLoading, isError } = useQuery({
     queryKey: ["menuItems"],
-    queryFn: menuItemsService.getAll,
+    queryFn: async () => {
+      console.log("Fetching menu items in Menu component");
+      const items = await menuItemsService.getAll();
+      console.log("Menu items fetched:", items);
+      return items;
+    },
   });
   
   // Filter menu items based on search query

@@ -50,18 +50,25 @@ const MenuManagement = () => {
   
   const queryClient = useQueryClient();
   
-  // Fetch menu items
+  // Fetch menu items with better error handling
   const { data: menuItems = [], isLoading } = useQuery({
     queryKey: ["menuItems"],
-    queryFn: menuItemsService.getAll,
+    queryFn: async () => {
+      console.log("Fetching menu items in MenuManagement component");
+      const items = await menuItemsService.getAll();
+      console.log("Menu items fetched:", items);
+      return items;
+    },
   });
 
   // Create menu item mutation
   const createMutation = useMutation({
     mutationFn: async (newItem: Omit<MenuItem, 'id' | 'created_at'>) => {
+      console.log("Creating new menu item:", newItem);
       return menuItemsService.create(newItem);
     },
     onSuccess: () => {
+      console.log("Successfully created menu item, invalidating queries");
       queryClient.invalidateQueries({ queryKey: ["menuItems"] });
       toast({
         title: "Menu Item Added",
@@ -71,6 +78,7 @@ const MenuManagement = () => {
       resetForm();
     },
     onError: (error) => {
+      console.error("Error in create mutation:", error);
       toast({
         title: "Failed to add item",
         description: error.message,
@@ -85,6 +93,7 @@ const MenuManagement = () => {
       return menuItemsService.update(id, data);
     },
     onSuccess: () => {
+      console.log("Successfully updated menu item, invalidating queries");
       queryClient.invalidateQueries({ queryKey: ["menuItems"] });
       toast({
         title: "Menu Item Updated",
@@ -94,6 +103,7 @@ const MenuManagement = () => {
       resetForm();
     },
     onError: (error) => {
+      console.error("Error in update mutation:", error);
       toast({
         title: "Failed to update item",
         description: error.message,
@@ -108,6 +118,7 @@ const MenuManagement = () => {
       return menuItemsService.delete(id);
     },
     onSuccess: () => {
+      console.log("Successfully deleted menu item, invalidating queries");
       queryClient.invalidateQueries({ queryKey: ["menuItems"] });
       toast({
         title: "Menu Item Deleted",
@@ -115,6 +126,7 @@ const MenuManagement = () => {
       });
     },
     onError: (error) => {
+      console.error("Error in delete mutation:", error);
       toast({
         title: "Failed to delete item",
         description: error.message,
@@ -173,10 +185,12 @@ const MenuManagement = () => {
     e.preventDefault();
     
     try {
+      console.log("Saving menu item, form data:", formData);
       let imageUrl = editingItem?.image_url || '';
       
       // Upload image if available
       if (fileUpload) {
+        console.log("Uploading file:", fileUpload.name);
         const fileName = `${Date.now()}_${fileUpload.name}`;
         imageUrl = await menuItemsService.uploadImage(fileUpload, fileName);
       }
@@ -189,6 +203,8 @@ const MenuManagement = () => {
         status: formData.status,
         image_url: imageUrl,
       };
+      
+      console.log("Prepared item data:", itemData);
       
       if (editingItem) {
         updateMutation.mutate({ id: editingItem.id, data: itemData });
