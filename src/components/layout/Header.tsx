@@ -45,6 +45,13 @@ const Header = () => {
                 </>
               )}
               
+              {/* Show Customer Dashboard for customers */}
+              {userRole === "customer" && (
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/customer-dashboard">My Profile</Link>
+                </Button>
+              )}
+              
               {/* Show Order History for customers */}
               {userRole === "customer" && (
                 <Button asChild variant="outline" size="sm">

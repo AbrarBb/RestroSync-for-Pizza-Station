@@ -17,6 +17,7 @@ import Staff from "./pages/Staff";
 import Reports from "./pages/Reports";
 import MenuManagement from "./pages/MenuManagement";
 import DeliveryManagement from "./pages/DeliveryManagement";
+import CustomerDashboard from "./pages/CustomerDashboard";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -87,6 +88,11 @@ const App = () => (
             <Route path="/delivery" element={
               <ProtectedRoute allowedRoles={["admin", "staff"]}>
                 <DeliveryManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/customer-dashboard" element={
+              <ProtectedRoute allowedRoles={["customer"]}>
+                <CustomerDashboard />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />

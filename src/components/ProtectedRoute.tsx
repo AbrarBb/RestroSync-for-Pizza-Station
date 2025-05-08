@@ -52,7 +52,7 @@ const ProtectedRoute = ({
     
     // Direct users based on their role
     if (userRole === "customer") {
-      return <Navigate to="/menu" replace />;
+      return <Navigate to="/customer-dashboard" replace />;
     } else if (userRole === "staff") {
       return <Navigate to="/dashboard" replace />;
     } else {

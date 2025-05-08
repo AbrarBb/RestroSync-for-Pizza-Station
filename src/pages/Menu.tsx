@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Sample menu data
+// Sample menu data with improved image handling
 const menuItems = [
   {
     id: 1,
@@ -20,7 +19,7 @@ const menuItems = [
     name: "Margherita",
     description: "Classic tomato sauce, mozzarella, and fresh basil",
     price: 1132.91, // Converted from 12.99 USD to BDT
-    image: "/placeholder.svg"
+    image: "/placeholder.svg" 
   },
   {
     id: 2,
@@ -78,7 +77,7 @@ const Menu = () => {
   const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false);
   const [isGuestCheckout, setIsGuestCheckout] = useState(false);
   const [guestInfo, setGuestInfo] = useState({ name: "", email: "", phone: "" });
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const navigate = useNavigate();
   
   // Filter menu items based on search query
@@ -199,7 +198,17 @@ const Menu = () => {
                 <Link to="/login"><User className="h-4 w-4 mr-1" /> Sign In</Link>
               </Button>
             ) : (
-              <Link to="/dashboard" className="text-sm font-medium">Dashboard</Link>
+              <>
+                {userRole === "customer" ? (
+                  <Button asChild size="sm" variant="outline">
+                    <Link to="/customer-dashboard">My Account</Link>
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline">
+                    <Link to="/dashboard">Dashboard</Link>
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -422,12 +431,21 @@ interface MenuItemProps {
 }
 
 const MenuItemCard = ({ item, onAddToCart }: MenuItemProps) => {
+  // Ensure image is displayed correctly
+  const imageUrl = item.image?.startsWith('http') || item.image?.startsWith('/') 
+    ? item.image 
+    : `/placeholder.svg`;
+    
   return (
     <Card className="overflow-hidden">
       <img 
-        src={item.image} 
+        src={imageUrl} 
         alt={item.name} 
         className="w-full h-48 object-cover"
+        onError={(e) => {
+          // Fallback to placeholder if image fails to load
+          (e.target as HTMLImageElement).src = "/placeholder.svg";
+        }}
       />
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-2">
