@@ -1,4 +1,5 @@
 
+import React from "react"; // Explicitly import React
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,76 +32,78 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/dashboard" element={
-              <ProtectedRoute allowedRoles={["admin", "staff"]}>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/menu" element={
-              <ProtectedRoute requireAuth={false}>
-                <Menu />
-              </ProtectedRoute>
-            } />
-            <Route path="/reservations" element={
-              <ProtectedRoute requireAuth={false}>
-                <Reservations />
-              </ProtectedRoute>
-            } />
-            <Route path="/orders" element={
-              <ProtectedRoute>
-                <Orders />
-              </ProtectedRoute>
-            } />
-            <Route path="/menu-management" element={
-              <ProtectedRoute allowedRoles={["admin", "staff"]}>
-                <MenuManagement />
-              </ProtectedRoute>
-            } />
-            <Route path="/inventory" element={
-              <ProtectedRoute allowedRoles={["admin", "staff"]}>
-                <Inventory />
-              </ProtectedRoute>
-            } />
-            <Route path="/customers" element={
-              <ProtectedRoute allowedRoles={["admin", "staff"]}>
-                <Customers />
-              </ProtectedRoute>
-            } />
-            <Route path="/staff" element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <Staff />
-              </ProtectedRoute>
-            } />
-            <Route path="/reports" element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <Reports />
-              </ProtectedRoute>
-            } />
-            <Route path="/delivery" element={
-              <ProtectedRoute allowedRoles={["admin", "staff"]}>
-                <DeliveryManagement />
-              </ProtectedRoute>
-            } />
-            <Route path="/customer-dashboard" element={
-              <ProtectedRoute allowedRoles={["customer"]}>
-                <CustomerDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
+        <TooltipProvider>
+          <AuthProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/dashboard" element={
+                <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/menu" element={
+                <ProtectedRoute requireAuth={false}>
+                  <Menu />
+                </ProtectedRoute>
+              } />
+              <Route path="/reservations" element={
+                <ProtectedRoute requireAuth={false}>
+                  <Reservations />
+                </ProtectedRoute>
+              } />
+              <Route path="/orders" element={
+                <ProtectedRoute>
+                  <Orders />
+                </ProtectedRoute>
+              } />
+              <Route path="/menu-management" element={
+                <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                  <MenuManagement />
+                </ProtectedRoute>
+              } />
+              <Route path="/inventory" element={
+                <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                  <Inventory />
+                </ProtectedRoute>
+              } />
+              <Route path="/customers" element={
+                <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                  <Customers />
+                </ProtectedRoute>
+              } />
+              <Route path="/staff" element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <Staff />
+                </ProtectedRoute>
+              } />
+              <Route path="/reports" element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <Reports />
+                </ProtectedRoute>
+              } />
+              <Route path="/delivery" element={
+                <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                  <DeliveryManagement />
+                </ProtectedRoute>
+              } />
+              <Route path="/customer-dashboard" element={
+                <ProtectedRoute allowedRoles={["customer"]}>
+                  <CustomerDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </TooltipProvider>
       </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+    </QueryClientProvider>
+  </React.StrictMode>
 );
 
 export default App;
