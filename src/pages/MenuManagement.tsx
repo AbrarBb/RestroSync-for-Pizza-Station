@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,108 +32,188 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Search, Plus, Edit, Trash } from "lucide-react";
-
-interface MenuItem {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  status: "active" | "out-of-stock" | "seasonal";
-  image: string;
-}
-
-const menuItems: MenuItem[] = [
-  {
-    id: 1,
-    name: "Margherita",
-    description: "Classic tomato sauce, mozzarella, and fresh basil",
-    price: 1132.91,
-    category: "pizza",
-    status: "active",
-    image: "/placeholder.svg"
-  },
-  {
-    id: 2,
-    name: "Pepperoni",
-    description: "Tomato sauce, mozzarella, and pepperoni",
-    price: 1307.13,
-    category: "pizza",
-    status: "active",
-    image: "/placeholder.svg"
-  },
-  {
-    id: 3,
-    name: "Vegetarian",
-    description: "Tomato sauce, mozzarella, bell peppers, mushrooms, onions",
-    price: 1394.13,
-    category: "pizza",
-    status: "active",
-    image: "/placeholder.svg"
-  },
-  {
-    id: 4,
-    name: "Garlic Breadsticks",
-    description: "Freshly baked breadsticks with garlic butter",
-    price: 522.33,
-    category: "sides",
-    status: "active",
-    image: "/placeholder.svg"
-  },
-  {
-    id: 5,
-    name: "Caesar Salad",
-    description: "Romaine lettuce, croutons, parmesan cheese with Caesar dressing",
-    price: 696.55,
-    category: "sides",
-    status: "active",
-    image: "/placeholder.svg"
-  },
-  {
-    id: 6,
-    name: "Soda",
-    description: "Your choice of Coke, Sprite, or Fanta",
-    price: 217.07,
-    category: "drinks",
-    status: "active",
-    image: "/placeholder.svg"
-  },
-  {
-    id: 7,
-    name: "Iced Tea",
-    description: "Freshly brewed iced tea",
-    price: 260.74,
-    category: "drinks",
-    status: "out-of-stock",
-    image: "/placeholder.svg"
-  },
-  {
-    id: 8,
-    name: "BBQ Chicken Pizza",
-    description: "BBQ sauce, mozzarella, chicken, red onions, and cilantro",
-    price: 1481.13,
-    category: "pizza",
-    status: "active",
-    image: "/placeholder.svg"
-  },
-  {
-    id: 9,
-    name: "Mango Smoothie",
-    description: "Fresh mango blended with yogurt and ice",
-    price: 435.32,
-    category: "drinks",
-    status: "seasonal",
-    image: "/placeholder.svg"
-  }
-];
+import { Search, Plus, Edit, Trash, Loader2 } from "lucide-react";
+import { MenuItem, menuItemsService } from "@/lib/supabase";
 
 const MenuManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [fileUpload, setFileUpload] = useState<File | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    price: "",
+    category: "",
+    status: "active" as "active" | "out-of-stock" | "seasonal",
+  });
   
+  const queryClient = useQueryClient();
+  
+  // Fetch menu items
+  const { data: menuItems = [], isLoading } = useQuery({
+    queryKey: ["menuItems"],
+    queryFn: menuItemsService.getAll,
+  });
+
+  // Create menu item mutation
+  const createMutation = useMutation({
+    mutationFn: async (newItem: Omit<MenuItem, 'id' | 'created_at'>) => {
+      return menuItemsService.create(newItem);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menuItems"] });
+      toast({
+        title: "Menu Item Added",
+        description: "New menu item has been added successfully.",
+      });
+      setDialogOpen(false);
+      resetForm();
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to add item",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update menu item mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<MenuItem> }) => {
+      return menuItemsService.update(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menuItems"] });
+      toast({
+        title: "Menu Item Updated",
+        description: "Menu item has been updated successfully.",
+      });
+      setDialogOpen(false);
+      resetForm();
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to update item",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete menu item mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return menuItemsService.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menuItems"] });
+      toast({
+        title: "Menu Item Deleted",
+        description: "Menu item has been deleted successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to delete item",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Reset form data
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      description: "",
+      price: "",
+      category: "",
+      status: "active",
+    });
+    setFileUpload(null);
+    setEditingItem(null);
+  };
+
+  // Set form data when editing item
+  useEffect(() => {
+    if (editingItem) {
+      setFormData({
+        name: editingItem.name,
+        description: editingItem.description,
+        price: editingItem.price.toString(),
+        category: editingItem.category,
+        status: editingItem.status,
+      });
+    } else {
+      resetForm();
+    }
+  }, [editingItem]);
+
+  // Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handle select input changes
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handle file input changes
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setFileUpload(file);
+  };
+
+  // Handle form submission
+  const handleSaveItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      let imageUrl = editingItem?.image_url || '';
+      
+      // Upload image if available
+      if (fileUpload) {
+        const fileName = `${Date.now()}_${fileUpload.name}`;
+        imageUrl = await menuItemsService.uploadImage(fileUpload, fileName);
+      }
+      
+      const itemData = {
+        name: formData.name,
+        description: formData.description,
+        price: Number(formData.price),
+        category: formData.category,
+        status: formData.status,
+        image_url: imageUrl,
+      };
+      
+      if (editingItem) {
+        updateMutation.mutate({ id: editingItem.id, data: itemData });
+      } else {
+        createMutation.mutate(itemData);
+      }
+    } catch (error) {
+      console.error("Error saving menu item:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save menu item",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle delete item
+  const handleDeleteItem = (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
+      deleteMutation.mutate(id);
+    }
+  };
+  
+  // Filter menu items based on search term and category
   const filteredItems = menuItems.filter((item) => {
     const matchesSearch = 
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -143,8 +224,10 @@ const MenuManagement = () => {
     return matchesSearch && matchesCategory;
   });
 
+  // Get unique categories from menu items
   const categories = Array.from(new Set(menuItems.map(item => item.category)));
 
+  // Get status color for badges
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
@@ -156,32 +239,6 @@ const MenuManagement = () => {
       default:
         return "bg-gray-100 text-gray-800";
     }
-  };
-
-  const handleSaveItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (editingItem) {
-      toast({
-        title: "Menu Item Updated",
-        description: `"${editingItem.name}" has been updated successfully.`,
-      });
-    } else {
-      toast({
-        title: "Menu Item Added",
-        description: "New menu item has been added successfully.",
-      });
-    }
-    
-    setDialogOpen(false);
-    setEditingItem(null);
-  };
-
-  const handleDeleteItem = (id: number, name: string) => {
-    toast({
-      title: "Menu Item Removed",
-      description: `"${name}" has been removed from the menu.`,
-    });
   };
 
   return (
@@ -262,15 +319,19 @@ const MenuManagement = () => {
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Item Name</label>
                         <Input 
-                          required 
-                          defaultValue={editingItem?.name} 
+                          required
+                          name="name"
+                          value={formData.name}
+                          onChange={handleInputChange}
                         />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Description</label>
                         <Textarea 
-                          required 
-                          defaultValue={editingItem?.description}
+                          required
+                          name="description"
+                          value={formData.description}
+                          onChange={handleInputChange}
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -278,30 +339,49 @@ const MenuManagement = () => {
                           <label className="text-sm font-medium">Price (৳)</label>
                           <Input 
                             type="number" 
-                            step="0.01" 
-                            required 
-                            defaultValue={editingItem?.price}
+                            step="0.01"
+                            required
+                            name="price"
+                            value={formData.price}
+                            onChange={handleInputChange}
                           />
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Category</label>
-                          <Select defaultValue={editingItem?.category}>
+                          <Select 
+                            value={formData.category} 
+                            onValueChange={(value) => handleSelectChange("category", value)}
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                             <SelectContent>
-                              {categories.map(category => (
-                                <SelectItem key={category} value={category}>
-                                  {category.charAt(0).toUpperCase() + category.slice(1)}
-                                </SelectItem>
-                              ))}
+                              {categories.length > 0 ? (
+                                categories.map(category => (
+                                  <SelectItem key={category} value={category}>
+                                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <>
+                                  <SelectItem value="pizza">Pizza</SelectItem>
+                                  <SelectItem value="sides">Sides</SelectItem>
+                                  <SelectItem value="drinks">Drinks</SelectItem>
+                                </>
+                              )}
+                              <SelectItem value="new">+ Add New Category</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Status</label>
-                        <Select defaultValue={editingItem?.status || "active"}>
+                        <Select 
+                          value={formData.status} 
+                          onValueChange={(value: "active" | "out-of-stock" | "seasonal") => 
+                            handleSelectChange("status", value)
+                          }
+                        >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -314,11 +394,38 @@ const MenuManagement = () => {
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Image</label>
-                        <Input type="file" />
+                        <Input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={handleFileChange}
+                        />
+                        {editingItem?.image_url && !fileUpload && (
+                          <div className="mt-2">
+                            <p className="text-xs text-gray-500">Current image:</p>
+                            <img 
+                              src={editingItem.image_url} 
+                              alt={editingItem.name} 
+                              className="mt-1 h-20 w-auto object-cover rounded-md"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button type="submit">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => {
+                          setDialogOpen(false);
+                          resetForm();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                        {(createMutation.isPending || updateMutation.isPending) && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
                         {editingItem ? "Save Changes" : "Add Item"}
                       </Button>
                     </DialogFooter>
@@ -348,60 +455,77 @@ const MenuManagement = () => {
               ))}
             </div>
 
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell className="capitalize">{item.category}</TableCell>
-                      <TableCell className="max-w-[300px] truncate">{item.description}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={`${getStatusColor(item.status)} capitalize`}
-                        >
-                          {item.status.replace("-", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">৳{item.price.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setEditingItem(item);
-                              setDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="text-red-500 hover:text-red-600"
-                            onClick={() => handleDeleteItem(item.id, item.name)}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+            {isLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-2 text-gray-500">Loading menu items...</p>
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-gray-500">No menu items found</p>
+                {searchTerm && (
+                  <p className="text-gray-400 text-sm mt-1">
+                    Try adjusting your search or filter
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Price</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="capitalize">{item.category}</TableCell>
+                        <TableCell className="max-w-[300px] truncate">{item.description}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={`${getStatusColor(item.status)} capitalize`}
+                          >
+                            {item.status.replace("-", " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">৳{item.price.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setEditingItem(item);
+                                setDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-red-500 hover:text-red-600"
+                              onClick={() => handleDeleteItem(item.id, item.name)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

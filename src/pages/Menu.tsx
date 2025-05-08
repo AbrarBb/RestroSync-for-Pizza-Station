@@ -1,84 +1,42 @@
+
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, Search, Plus, Minus, User } from "lucide-react";
+import { ShoppingCart, Search, Plus, Minus, User, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
+import { menuItemsService, ordersService, MenuItem } from "@/lib/supabase";
+import { Badge } from "@/components/ui/badge";
 
-// Sample menu data with improved image handling
-const menuItems = [
-  {
-    id: 1,
-    category: "pizza",
-    name: "Margherita",
-    description: "Classic tomato sauce, mozzarella, and fresh basil",
-    price: 1132.91, // Converted from 12.99 USD to BDT
-    image: "/placeholder.svg" 
-  },
-  {
-    id: 2,
-    category: "pizza",
-    name: "Pepperoni",
-    description: "Tomato sauce, mozzarella, and pepperoni",
-    price: 1307.13, // Converted from 14.99 USD to BDT
-    image: "/placeholder.svg"
-  },
-  {
-    id: 3,
-    category: "pizza",
-    name: "Vegetarian",
-    description: "Tomato sauce, mozzarella, bell peppers, mushrooms, onions",
-    price: 1394.13, // Converted from 15.99 USD to BDT
-    image: "/placeholder.svg"
-  },
-  {
-    id: 4,
-    category: "sides",
-    name: "Garlic Breadsticks",
-    description: "Freshly baked breadsticks with garlic butter",
-    price: 522.33, // Converted from 5.99 USD to BDT
-    image: "/placeholder.svg"
-  },
-  {
-    id: 5,
-    category: "sides",
-    name: "Caesar Salad",
-    description: "Romaine lettuce, croutons, parmesan cheese with Caesar dressing",
-    price: 696.55, // Converted from 7.99 USD to BDT
-    image: "/placeholder.svg"
-  },
-  {
-    id: 6,
-    category: "drinks",
-    name: "Soda",
-    description: "Your choice of Coke, Sprite, or Fanta",
-    price: 217.07, // Converted from 2.49 USD to BDT
-    image: "/placeholder.svg"
-  },
-  {
-    id: 7,
-    category: "drinks",
-    name: "Iced Tea",
-    description: "Freshly brewed iced tea",
-    price: 260.74, // Converted from 2.99 USD to BDT
-    image: "/placeholder.svg"
-  }
-];
+// Cart item interface
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
 
 const Menu = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [cart, setCart] = useState<{id: number, name: string, price: number, quantity: number}[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false);
   const [isGuestCheckout, setIsGuestCheckout] = useState(false);
   const [guestInfo, setGuestInfo] = useState({ name: "", email: "", phone: "" });
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
+
+  // Fetch menu items
+  const { data: menuItems = [], isLoading } = useQuery({
+    queryKey: ["menuItems"],
+    queryFn: menuItemsService.getAll,
+  });
   
   // Filter menu items based on search query
   const filteredItems = (category: string) => {
@@ -89,9 +47,12 @@ const Menu = () => {
         item.description.toLowerCase().includes(searchQuery.toLowerCase())
       );
   };
+
+  // Get unique categories
+  const categories = Array.from(new Set(menuItems.map(item => item.category)));
   
   // Add item to cart
-  const addToCart = (id: number, name: string, price: number) => {
+  const addToCart = (id: string, name: string, price: number) => {
     const existingItem = cart.find(item => item.id === id);
     
     if (existingItem) {
@@ -111,7 +72,7 @@ const Menu = () => {
   };
   
   // Remove item from cart
-  const removeFromCart = (id: number) => {
+  const removeFromCart = (id: string) => {
     const existingItem = cart.find(item => item.id === id);
     
     if (existingItem && existingItem.quantity > 1) {
@@ -141,18 +102,60 @@ const Menu = () => {
   };
 
   // Process the checkout
-  const processCheckout = () => {
-    // Handle checkout logic
-    toast({
-      title: "Order Placed",
-      description: isGuestCheckout 
-        ? `Thank you ${guestInfo.name}! Your order has been placed successfully.` 
-        : "Your order has been placed successfully!",
-    });
-    setCart([]);
-    setIsCheckoutDialogOpen(false);
-    setIsGuestCheckout(false);
-    setGuestInfo({ name: "", email: "", phone: "" });
+  const processCheckout = async () => {
+    try {
+      // Prepare order data
+      const orderData = {
+        customer_id: user?.id,
+        items: cart.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        })),
+        total: cartTotal,
+        status: "pending" as const,
+        order_type: "pickup" as const,
+        created_at: new Date().toISOString(),
+        payment_status: "pending" as const
+      };
+
+      // Add guest info if guest checkout
+      if (isGuestCheckout && !user) {
+        orderData.customer_name = guestInfo.name;
+        orderData.customer_email = guestInfo.email;
+        orderData.customer_phone = guestInfo.phone;
+      }
+
+      // Create order
+      await ordersService.create(orderData);
+
+      // Show success toast
+      toast({
+        title: "Order Placed",
+        description: isGuestCheckout 
+          ? `Thank you ${guestInfo.name}! Your order has been placed successfully.` 
+          : "Your order has been placed successfully!",
+      });
+
+      // Reset cart and checkout state
+      setCart([]);
+      setIsCheckoutDialogOpen(false);
+      setIsGuestCheckout(false);
+      setGuestInfo({ name: "", email: "", phone: "" });
+
+      // Redirect to orders page if user is logged in
+      if (user) {
+        navigate('/orders');
+      }
+    } catch (error) {
+      console.error("Error placing order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to place your order. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle guest checkout form submission
@@ -218,120 +221,127 @@ const Menu = () => {
       <main className="flex-grow container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Our Menu</h1>
         
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Menu Items */}
-          <div className="flex-grow">
-            <Tabs defaultValue="pizza" className="w-full">
-              <TabsList className="mb-6">
-                <TabsTrigger value="pizza">Pizzas</TabsTrigger>
-                <TabsTrigger value="sides">Sides</TabsTrigger>
-                <TabsTrigger value="drinks">Drinks</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="pizza" className="mt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredItems("pizza").map((item) => (
-                    <MenuItemCard 
-                      key={item.id}
-                      item={item}
-                      onAddToCart={() => addToCart(item.id, item.name, item.price)}
-                    />
-                  ))}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="sides" className="mt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredItems("sides").map((item) => (
-                    <MenuItemCard 
-                      key={item.id}
-                      item={item}
-                      onAddToCart={() => addToCart(item.id, item.name, item.price)}
-                    />
-                  ))}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="drinks" className="mt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredItems("drinks").map((item) => (
-                    <MenuItemCard 
-                      key={item.id}
-                      item={item}
-                      onAddToCart={() => addToCart(item.id, item.name, item.price)}
-                    />
-                  ))}
-                </div>
-              </TabsContent>
-            </Tabs>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+            <p className="text-gray-500">Loading menu items...</p>
           </div>
-          
-          {/* Cart */}
-          <div className="md:w-[350px] shrink-0">
-            <Card>
-              <CardContent className="pt-6">
-                <h2 className="text-xl font-bold mb-4">Your Order</h2>
-                {cart.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">Your cart is empty</p>
+        ) : (
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Menu Items */}
+            <div className="flex-grow">
+              <Tabs defaultValue={categories[0] || "pizza"} className="w-full">
+                <TabsList className="mb-6">
+                  {categories.length > 0 ? (
+                    categories.map(category => (
+                      <TabsTrigger key={category} value={category} className="capitalize">
+                        {category}
+                      </TabsTrigger>
+                    ))
+                  ) : (
+                    <>
+                      <TabsTrigger value="pizza">Pizzas</TabsTrigger>
+                      <TabsTrigger value="sides">Sides</TabsTrigger>
+                      <TabsTrigger value="drinks">Drinks</TabsTrigger>
+                    </>
+                  )}
+                </TabsList>
+                
+                {categories.length > 0 ? (
+                  categories.map(category => (
+                    <TabsContent key={category} value={category} className="mt-0">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {filteredItems(category).length > 0 ? (
+                          filteredItems(category).map((item) => (
+                            <MenuItemCard 
+                              key={item.id}
+                              item={item}
+                              onAddToCart={() => addToCart(item.id, item.name, item.price)}
+                            />
+                          ))
+                        ) : (
+                          <div className="col-span-2 py-10 text-center text-gray-500">
+                            No items found in this category
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  ))
                 ) : (
-                  <div className="space-y-4">
-                    {cart.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center">
-                        <div className="flex-grow">
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-sm text-gray-500">৳{item.price.toFixed(2)} × {item.quantity}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={() => removeFromCart(item.id)}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span>{item.quantity}</span>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={() => addToCart(item.id, item.name, item.price)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    <div className="border-t pt-4 mt-4">
-                      <div className="flex justify-between font-medium">
-                        <span>Subtotal</span>
-                        <span>৳{cartTotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm text-gray-500 mt-1">
-                        <span>Tax (7%)</span>
-                        <span>৳{(cartTotal * 0.07).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-lg mt-2">
-                        <span>Total</span>
-                        <span>৳{(cartTotal * 1.07).toFixed(2)}</span>
-                      </div>
-                    </div>
+                  <div className="py-10 text-center text-gray-500">
+                    No menu items available
                   </div>
                 )}
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  className="w-full" 
-                  disabled={cart.length === 0}
-                  onClick={handleCheckout}
-                >
-                  Proceed to Checkout
-                </Button>
-              </CardFooter>
-            </Card>
+              </Tabs>
+            </div>
+            
+            {/* Cart */}
+            <div className="md:w-[350px] shrink-0">
+              <Card>
+                <CardContent className="pt-6">
+                  <h2 className="text-xl font-bold mb-4">Your Order</h2>
+                  {cart.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">Your cart is empty</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {cart.map((item) => (
+                        <div key={item.id} className="flex justify-between items-center">
+                          <div className="flex-grow">
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-sm text-gray-500">৳{item.price.toFixed(2)} × {item.quantity}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-8 w-8"
+                              onClick={() => removeFromCart(item.id)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span>{item.quantity}</span>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-8 w-8"
+                              onClick={() => addToCart(item.id, item.name, item.price)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <div className="border-t pt-4 mt-4">
+                        <div className="flex justify-between font-medium">
+                          <span>Subtotal</span>
+                          <span>৳{cartTotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-500 mt-1">
+                          <span>Tax (7%)</span>
+                          <span>৳{(cartTotal * 0.07).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-lg mt-2">
+                          <span>Total</span>
+                          <span>৳{(cartTotal * 1.07).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    className="w-full" 
+                    disabled={cart.length === 0}
+                    onClick={handleCheckout}
+                  >
+                    Proceed to Checkout
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
       {/* Checkout Options Dialog */}
@@ -420,33 +430,37 @@ const Menu = () => {
 };
 
 interface MenuItemProps {
-  item: {
-    id: number;
-    name: string;
-    description: string;
-    price: number;
-    image: string;
-  };
+  item: MenuItem;
   onAddToCart: () => void;
 }
 
 const MenuItemCard = ({ item, onAddToCart }: MenuItemProps) => {
   // Ensure image is displayed correctly
-  const imageUrl = item.image?.startsWith('http') || item.image?.startsWith('/') 
-    ? item.image 
-    : `/placeholder.svg`;
-    
+  const imageUrl = item.image_url || "/placeholder.svg";
+  
   return (
     <Card className="overflow-hidden">
-      <img 
-        src={imageUrl} 
-        alt={item.name} 
-        className="w-full h-48 object-cover"
-        onError={(e) => {
-          // Fallback to placeholder if image fails to load
-          (e.target as HTMLImageElement).src = "/placeholder.svg";
-        }}
-      />
+      <div className="relative h-48">
+        <img 
+          src={imageUrl} 
+          alt={item.name} 
+          className="w-full h-48 object-cover"
+          onError={(e) => {
+            // Fallback to placeholder if image fails to load
+            (e.target as HTMLImageElement).src = "/placeholder.svg";
+          }}
+        />
+        {item.status !== "active" && (
+          <div className="absolute top-2 right-2">
+            <Badge 
+              variant="outline" 
+              className={`${item.status === "out-of-stock" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}
+            >
+              {item.status === "out-of-stock" ? "Out of stock" : "Seasonal"}
+            </Badge>
+          </div>
+        )}
+      </div>
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-2">
           <h3 className="font-bold">{item.name}</h3>
@@ -455,7 +469,9 @@ const MenuItemCard = ({ item, onAddToCart }: MenuItemProps) => {
         <p className="text-gray-600 text-sm mb-4">{item.description}</p>
       </CardContent>
       <CardFooter className="px-4 pb-4 pt-0 flex justify-end">
-        <Button onClick={onAddToCart}>Add to Cart</Button>
+        <Button onClick={onAddToCart} disabled={item.status === "out-of-stock"}>
+          {item.status === "out-of-stock" ? "Out of Stock" : "Add to Cart"}
+        </Button>
       </CardFooter>
     </Card>
   );

@@ -1,4 +1,5 @@
 
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -13,89 +14,18 @@ import { toast } from "@/hooks/use-toast";
 import { 
   Eye,
   Truck, 
-  MapPin
+  MapPin,
+  Loader2 
 } from "lucide-react";
-
-interface Order {
-  id: string;
-  customer: string;
-  items: string;
-  status: "pending" | "preparing" | "ready" | "delivered";
-  time: string;
-  total: number;
-  delivery?: {
-    address: string;
-    rider?: string;
-    method: "delivery" | "pickup" | "dine-in";
-  };
-}
-
-const orders: Order[] = [
-  {
-    id: "ORD-5623",
-    customer: "John Smith",
-    items: "1× Margherita, 1× Garlic Breadsticks",
-    status: "preparing",
-    time: "10 min ago",
-    total: 1655.24,
-    delivery: {
-      method: "delivery",
-      address: "123 Main St, Apt 4B",
-      rider: "Ahmed K.",
-    },
-  },
-  {
-    id: "ORD-5622",
-    customer: "Emily Johnson",
-    items: "2× Pepperoni, 1× Caesar Salad",
-    status: "pending",
-    time: "15 min ago",
-    total: 3311.36,
-    delivery: {
-      method: "pickup",
-      address: "Store Pickup",
-    },
-  },
-  {
-    id: "ORD-5621",
-    customer: "Michael Brown",
-    items: "1× Vegetarian, 2× Soda",
-    status: "ready",
-    time: "25 min ago",
-    total: 1828.27,
-    delivery: {
-      method: "dine-in",
-      address: "Table 8",
-    },
-  },
-  {
-    id: "ORD-5620",
-    customer: "Sarah Davis",
-    items: "1× Margherita, 1× Pepperoni",
-    status: "delivered",
-    time: "35 min ago",
-    total: 2440.04,
-    delivery: {
-      method: "delivery",
-      address: "456 Park Ave",
-      rider: "Rahul M.",
-    },
-  },
-  {
-    id: "ORD-5619",
-    customer: "David Wilson",
-    items: "1× Vegetarian, 1× Garlic Breadsticks, 1× Iced Tea",
-    status: "delivered",
-    time: "45 min ago",
-    total: 2177.20,
-    delivery: {
-      method: "pickup",
-      address: "Store Pickup",
-    },
-  },
-];
+import { ordersService, Order } from "@/lib/supabase";
 
 export function RecentOrdersTable() {
+  // Fetch recent orders
+  const { data: orders = [], isLoading, error } = useQuery({
+    queryKey: ["recentOrders"],
+    queryFn: () => ordersService.getRecentOrders(5),
+  });
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
@@ -106,6 +36,8 @@ export function RecentOrdersTable() {
         return "bg-green-100 text-green-800 hover:bg-green-200";
       case "delivered":
         return "bg-gray-100 text-gray-800 hover:bg-gray-200";
+      case "cancelled":
+        return "bg-red-100 text-red-800 hover:bg-red-200";
       default:
         return "bg-gray-100 text-gray-800 hover:bg-gray-200";
     }
@@ -124,12 +56,61 @@ export function RecentOrdersTable() {
     }
   };
 
+  const formatOrderTime = (createdAt: string) => {
+    const orderDate = new Date(createdAt);
+    const now = new Date();
+    const diffMs = now.getTime() - orderDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  };
+
+  const formatOrderItems = (items: any[]) => {
+    if (!items || items.length === 0) return "No items";
+    
+    return items.slice(0, 3).map(item => 
+      `${item.quantity || 1}× ${item.name}`
+    ).join(', ') + (items.length > 3 ? `, +${items.length - 3} more` : '');
+  };
+
   const handleViewOrder = (order: Order) => {
     toast({
       title: `Order ${order.id}`,
-      description: `Viewing details for ${order.customer}'s order`,
+      description: `Viewing details for order placed ${formatOrderTime(order.created_at)}`,
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2 text-muted-foreground">Loading orders...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-10 text-red-500">
+        Error loading orders. Please try again later.
+      </div>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="text-center py-10 text-gray-500">
+        No orders found. New orders will appear here.
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-x-auto">
@@ -149,9 +130,9 @@ export function RecentOrdersTable() {
         <TableBody>
           {orders.map((order) => (
             <TableRow key={order.id}>
-              <TableCell className="font-medium">{order.id}</TableCell>
-              <TableCell>{order.customer}</TableCell>
-              <TableCell>{order.items}</TableCell>
+              <TableCell className="font-medium">{order.id.substring(0, 8).toUpperCase()}</TableCell>
+              <TableCell>{order.customer_name || "Unknown"}</TableCell>
+              <TableCell>{formatOrderItems(order.items as any[])}</TableCell>
               <TableCell>
                 <Badge
                   variant="outline"
@@ -162,15 +143,15 @@ export function RecentOrdersTable() {
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-1">
-                  {order.delivery && getDeliveryMethodIcon(order.delivery.method)}
-                  <span className="text-xs">
-                    {order.delivery?.method === "delivery" 
-                      ? `${order.delivery.address} (${order.delivery.rider})` 
-                      : order.delivery?.address}
+                  {getDeliveryMethodIcon(order.order_type)}
+                  <span className="text-xs capitalize">
+                    {order.order_type === "delivery" 
+                      ? `${order.delivery_address?.substring(0, 15) || "Address"} ${order.delivery_address?.length > 15 ? "..." : ""}` 
+                      : order.order_type}
                   </span>
                 </div>
               </TableCell>
-              <TableCell>{order.time}</TableCell>
+              <TableCell>{formatOrderTime(order.created_at)}</TableCell>
               <TableCell className="text-right">৳{order.total.toFixed(2)}</TableCell>
               <TableCell className="text-right">
                 <Button 

@@ -16,7 +16,32 @@ const mockSupabaseClient = {
     signUp: () => Promise.resolve({ data: {}, error: null }),
     signOut: () => Promise.resolve({ error: null }),
   },
-  // Add other mock methods as needed
+  from: () => ({
+    select: () => ({
+      eq: () => ({
+        single: () => Promise.resolve({ data: null, error: null }),
+        order: () => ({
+          limit: () => Promise.resolve({ data: [], error: null })
+        })
+      }),
+      order: () => ({
+        limit: () => Promise.resolve({ data: [], error: null })
+      })
+    }),
+    insert: () => Promise.resolve({ data: null, error: null }),
+    update: () => ({
+      eq: () => Promise.resolve({ data: null, error: null })
+    }),
+    delete: () => ({
+      eq: () => Promise.resolve({ data: null, error: null })
+    }),
+  }),
+  storage: {
+    from: () => ({
+      upload: () => Promise.resolve({ data: null, error: null }),
+      getPublicUrl: () => ({ data: { publicUrl: '' } }),
+    }),
+  },
 };
 
 // Create a single supabase client for the entire app
@@ -55,6 +80,9 @@ export type Order = {
   table_number?: string;
   payment_method?: string;
   payment_status?: "paid" | "pending";
+  customer_name?: string; // Added for guest orders
+  customer_email?: string; // Added for guest orders
+  customer_phone?: string; // Added for guest orders
 }
 
 export type Customer = {
@@ -108,3 +136,198 @@ export type InventoryItem = {
   last_restocked: string;
   supplier?: string;
 }
+
+// Database service for menu items
+export const menuItemsService = {
+  getAll: async () => {
+    const { data, error } = await supabase
+      .from('menu_items')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching menu items:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+  
+  getByCategory: async (category: string) => {
+    const { data, error } = await supabase
+      .from('menu_items')
+      .select('*')
+      .eq('category', category)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching menu items by category:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+  
+  getById: async (id: string) => {
+    const { data, error } = await supabase
+      .from('menu_items')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching menu item by id:', error);
+      return null;
+    }
+    
+    return data;
+  },
+  
+  create: async (item: Omit<MenuItem, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase
+      .from('menu_items')
+      .insert([item]);
+    
+    if (error) {
+      console.error('Error creating menu item:', error);
+      throw error;
+    }
+    
+    return data;
+  },
+  
+  update: async (id: string, item: Partial<MenuItem>) => {
+    const { data, error } = await supabase
+      .from('menu_items')
+      .update(item)
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error updating menu item:', error);
+      throw error;
+    }
+    
+    return data;
+  },
+  
+  delete: async (id: string) => {
+    const { error } = await supabase
+      .from('menu_items')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting menu item:', error);
+      throw error;
+    }
+    
+    return true;
+  },
+
+  uploadImage: async (file: File, path: string) => {
+    const { data, error } = await supabase.storage
+      .from('menu_images')
+      .upload(path, file);
+    
+    if (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+    
+    const { data: urlData } = supabase.storage
+      .from('menu_images')
+      .getPublicUrl(path);
+    
+    return urlData.publicUrl;
+  }
+};
+
+// Database service for orders
+export const ordersService = {
+  getAll: async () => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching orders:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+  
+  getByCustomerId: async (customerId: string) => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching orders by customer id:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+  
+  getById: async (id: string) => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching order by id:', error);
+      return null;
+    }
+    
+    return data;
+  },
+  
+  create: async (order: Omit<Order, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([order]);
+    
+    if (error) {
+      console.error('Error creating order:', error);
+      throw error;
+    }
+    
+    return data;
+  },
+  
+  updateStatus: async (id: string, status: Order['status']) => {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error updating order status:', error);
+      throw error;
+    }
+    
+    return data;
+  },
+
+  getRecentOrders: async (limit = 5) => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) {
+      console.error('Error fetching recent orders:', error);
+      return [];
+    }
+    
+    return data || [];
+  }
+};
+
