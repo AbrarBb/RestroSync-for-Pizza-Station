@@ -7,9 +7,14 @@ import { Loader2 } from "lucide-react";
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: UserRole[];
+  requireAuth?: boolean;
 }
 
-const ProtectedRoute = ({ children, allowedRoles = ["admin", "staff", "customer"] }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ 
+  children, 
+  allowedRoles = ["admin", "staff", "customer"],
+  requireAuth = true
+}: ProtectedRouteProps) => {
   const { user, userRole, isLoading } = useAuth();
   
   // Show loading state
@@ -20,6 +25,11 @@ const ProtectedRoute = ({ children, allowedRoles = ["admin", "staff", "customer"
         <p className="mt-2 text-muted-foreground">Loading...</p>
       </div>
     );
+  }
+  
+  // If route doesn't require auth, allow access
+  if (!requireAuth) {
+    return <>{children}</>;
   }
   
   // Check if user is authenticated

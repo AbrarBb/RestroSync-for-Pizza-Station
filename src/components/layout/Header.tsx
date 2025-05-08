@@ -1,8 +1,11 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
+  const { user, userRole, signOut } = useAuth();
+
   return (
     <header className="bg-white shadow-sm py-4 px-4">
       <div className="container mx-auto flex justify-between items-center">
@@ -19,9 +22,29 @@ const Header = () => {
             <Link to="/reservations">Reservations</Link>
           </Button>
           
-          <Button asChild size="sm">
-            <Link to="/login">Sign In</Link>
-          </Button>
+          {!user ? (
+            <Button asChild size="sm">
+              <Link to="/login">Sign In</Link>
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              {userRole === "admin" && (
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/staff">Manage Staff</Link>
+                </Button>
+              )}
+              <Button asChild variant="outline" size="sm">
+                <Link to="/dashboard">Dashboard</Link>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => signOut()}
+              >
+                Sign Out
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </header>

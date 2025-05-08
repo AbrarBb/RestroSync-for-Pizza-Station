@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import Header from "@/components/layout/Header";
@@ -11,6 +11,8 @@ import DateTimePicker from "@/components/reservation/DateTimePicker";
 import GuestSelector from "@/components/reservation/GuestSelector";
 import CustomerInfoForm from "@/components/reservation/CustomerInfoForm";
 import LocationInfo from "@/components/reservation/LocationInfo";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Reservations = () => {
   const [date, setDate] = useState<Date | undefined>(undefined);
@@ -21,6 +23,10 @@ const Reservations = () => {
   const [email, setEmail] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
+  
+  const { user } = useAuth();
+  const navigate = useNavigate();
   
   // List of available time slots
   const timeSlots = [
@@ -34,6 +40,18 @@ const Reservations = () => {
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If user is not logged in, show login dialog
+    if (!user) {
+      setIsLoginDialogOpen(true);
+      return;
+    }
+    
+    // Process reservation if user is logged in
+    processReservation();
+  };
+  
+  const processReservation = () => {
     setIsSubmitting(true);
     
     // Simulate reservation processing
@@ -52,6 +70,8 @@ const Reservations = () => {
       setPhone("");
       setEmail("");
       setSpecialRequests("");
+      
+      setIsLoginDialogOpen(false);
     }, 1500);
   };
   
@@ -128,6 +148,46 @@ const Reservations = () => {
           </Card>
         </div>
       </main>
+
+      {/* Login Dialog */}
+      <Dialog open={isLoginDialogOpen} onOpenChange={setIsLoginDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sign in to complete your reservation</DialogTitle>
+            <DialogDescription>
+              You need to sign in or create an account to confirm your table reservation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Button onClick={() => navigate('/login')} className="w-full">
+              Sign In
+            </Button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/login')} 
+              className="w-full"
+            >
+              Create an Account
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="ghost" 
+              onClick={() => setIsLoginDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>

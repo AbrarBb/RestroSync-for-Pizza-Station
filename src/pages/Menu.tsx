@@ -5,8 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
-import { ShoppingCart, Search, Plus, Minus } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ShoppingCart, Search, Plus, Minus, User } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Sample menu data
 const menuItems = [
@@ -71,6 +75,11 @@ const menuItems = [
 const Menu = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<{id: number, name: string, price: number, quantity: number}[]>([]);
+  const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false);
+  const [isGuestCheckout, setIsGuestCheckout] = useState(false);
+  const [guestInfo, setGuestInfo] = useState({ name: "", email: "", phone: "" });
+  const { user } = useAuth();
+  const navigate = useNavigate();
   
   // Filter menu items based on search query
   const filteredItems = (category: string) => {
@@ -120,6 +129,39 @@ const Menu = () => {
   // Calculate total price
   const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
 
+  // Handle checkout process
+  const handleCheckout = () => {
+    // If user is logged in, process checkout directly
+    if (user) {
+      processCheckout();
+      return;
+    }
+    
+    // If user is not logged in, show checkout options dialog
+    setIsCheckoutDialogOpen(true);
+  };
+
+  // Process the checkout
+  const processCheckout = () => {
+    // Handle checkout logic
+    toast({
+      title: "Order Placed",
+      description: isGuestCheckout 
+        ? `Thank you ${guestInfo.name}! Your order has been placed successfully.` 
+        : "Your order has been placed successfully!",
+    });
+    setCart([]);
+    setIsCheckoutDialogOpen(false);
+    setIsGuestCheckout(false);
+    setGuestInfo({ name: "", email: "", phone: "" });
+  };
+
+  // Handle guest checkout form submission
+  const handleGuestCheckoutSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    processCheckout();
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -152,9 +194,13 @@ const Menu = () => {
               </Button>
             </div>
             
-            <Button asChild size="sm">
-              <Link to="/login">Sign In</Link>
-            </Button>
+            {!user ? (
+              <Button asChild size="sm">
+                <Link to="/login"><User className="h-4 w-4 mr-1" /> Sign In</Link>
+              </Button>
+            ) : (
+              <Link to="/dashboard" className="text-sm font-medium">Dashboard</Link>
+            )}
           </div>
         </div>
       </header>
@@ -269,21 +315,90 @@ const Menu = () => {
                 <Button 
                   className="w-full" 
                   disabled={cart.length === 0}
-                  onClick={() => {
-                    toast({
-                      title: "Order Placed",
-                      description: "Your order has been placed successfully!",
-                    });
-                    setCart([]);
-                  }}
+                  onClick={handleCheckout}
                 >
-                  Checkout
+                  Proceed to Checkout
                 </Button>
               </CardFooter>
             </Card>
           </div>
         </div>
       </main>
+
+      {/* Checkout Options Dialog */}
+      <Dialog open={isCheckoutDialogOpen} onOpenChange={setIsCheckoutDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Complete Your Order</DialogTitle>
+            <DialogDescription>
+              Sign in to your account or continue as a guest to complete your order.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isGuestCheckout ? (
+            <form onSubmit={handleGuestCheckoutSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="guest-name">Name</Label>
+                  <Input
+                    id="guest-name"
+                    value={guestInfo.name}
+                    onChange={(e) => setGuestInfo({...guestInfo, name: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="guest-email">Email</Label>
+                  <Input
+                    id="guest-email"
+                    type="email"
+                    value={guestInfo.email}
+                    onChange={(e) => setGuestInfo({...guestInfo, email: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="guest-phone">Phone Number</Label>
+                  <Input
+                    id="guest-phone"
+                    value={guestInfo.phone}
+                    onChange={(e) => setGuestInfo({...guestInfo, phone: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="terms" className="text-sm text-gray-500">
+                    By proceeding, you agree to pay upfront before your order is processed.
+                  </Label>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsGuestCheckout(false)}>
+                  Back
+                </Button>
+                <Button type="submit">Complete Purchase</Button>
+              </DialogFooter>
+            </form>
+          ) : (
+            <div className="grid gap-4 py-4">
+              <Button onClick={() => navigate('/login')} className="w-full">
+                Sign In to Continue
+              </Button>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+              <Button variant="outline" onClick={() => setIsGuestCheckout(true)} className="w-full">
+                Continue as Guest
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Footer */}
       <footer className="bg-gray-100 py-6 mt-12">

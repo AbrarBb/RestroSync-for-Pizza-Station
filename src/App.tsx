@@ -44,12 +44,12 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/menu" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAuth={false}>
                 <Menu />
               </ProtectedRoute>
             } />
             <Route path="/reservations" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAuth={false}>
                 <Reservations />
               </ProtectedRoute>
             } />
