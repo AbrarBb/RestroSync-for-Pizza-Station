@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -47,8 +48,9 @@ const Menu = () => {
       );
   };
 
-  // Get unique categories
-  const categories = Array.from(new Set(menuItems.map(item => item.category)));
+  // Get unique categories and ensure they are strings
+  const categories = Array.from(new Set(menuItems.map(item => item.category)))
+    .filter(category => typeof category === 'string') as string[];
   
   // Add item to cart
   const addToCart = (id: string, name: string, price: number) => {
@@ -232,7 +234,7 @@ const Menu = () => {
               <Tabs defaultValue={categories[0] || "pizza"} className="w-full">
                 <TabsList className="mb-6">
                   {categories.length > 0 ? (
-                    categories.map((category) => (
+                    categories.map((category: string) => (
                       <TabsTrigger key={category} value={category} className="capitalize">
                         {category}
                       </TabsTrigger>
@@ -247,7 +249,7 @@ const Menu = () => {
                 </TabsList>
                 
                 {categories.length > 0 ? (
-                  categories.map((category) => (
+                  categories.map((category: string) => (
                     <TabsContent key={category} value={category} className="mt-0">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {filteredItems(category).length > 0 ? (
