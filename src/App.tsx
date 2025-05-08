@@ -14,6 +14,7 @@ import Orders from "./pages/Orders";
 import Inventory from "./pages/Inventory";
 import Customers from "./pages/Customers";
 import Staff from "./pages/Staff";
+import Reports from "./pages/Reports";
 import MenuManagement from "./pages/MenuManagement";
 import DeliveryManagement from "./pages/DeliveryManagement";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -39,7 +40,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
                 <Dashboard />
               </ProtectedRoute>
             } />
@@ -76,6 +77,11 @@ const App = () => (
             <Route path="/staff" element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <Staff />
+              </ProtectedRoute>
+            } />
+            <Route path="/reports" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <Reports />
               </ProtectedRoute>
             } />
             <Route path="/delivery" element={

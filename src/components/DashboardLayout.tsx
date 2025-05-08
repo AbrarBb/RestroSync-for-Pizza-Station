@@ -15,6 +15,8 @@ import {
   LogOut,
   Bell,
   Search,
+  FileText,
+  Download,
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -26,9 +28,24 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const { signOut, isAdmin, userRole } = useAuth();
 
+  // Redirect customers away from dashboard
+  if (userRole === "customer") {
+    toast({
+      title: "Access denied",
+      description: "You don't have permission to access this page.",
+      variant: "destructive",
+    });
+    navigate("/menu");
+    return null;
+  }
+
   const handleLogout = () => {
     signOut();
   };
+
+  // Check if user is staff or admin
+  const isAdminUser = userRole === "admin";
+  const isStaffUser = userRole === "staff";
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -85,12 +102,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               label="Menu Management"
               isOpen={isSidebarOpen}
             />
+            
+            {/* Staff can see customers but not manage staff */}
             <NavItem
               to="/customers"
               icon={<Users />}
               label="Customers"
               isOpen={isSidebarOpen}
             />
+            
             <NavItem
               to="/inventory"
               icon={<Package />}
@@ -98,12 +118,22 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               isOpen={isSidebarOpen}
             />
             
-            {/* Only show Staff Management to admins */}
-            {isAdmin() && (
+            {/* Only show Staff Management to admin */}
+            {isAdminUser && (
               <NavItem
                 to="/staff"
                 icon={<Users />}
                 label="Staff Management"
+                isOpen={isSidebarOpen}
+              />
+            )}
+            
+            {/* Admin-only reports section */}
+            {isAdminUser && (
+              <NavItem
+                to="/reports"
+                icon={<FileText />}
+                label="Reports"
                 isOpen={isSidebarOpen}
               />
             )}

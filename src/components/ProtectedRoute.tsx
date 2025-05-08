@@ -35,8 +35,8 @@ const ProtectedRoute = ({
   // Check if user is authenticated
   if (!user) {
     toast({
-      title: "Access denied",
-      description: "You need to sign in first.",
+      title: "Authentication required",
+      description: "You need to sign in to access this page.",
       variant: "destructive",
     });
     return <Navigate to="/login" replace />;
@@ -45,11 +45,19 @@ const ProtectedRoute = ({
   // Check role-based access
   if (userRole && !allowedRoles.includes(userRole)) {
     toast({
-      title: "Permission denied",
-      description: "You don't have permission to access this page.",
+      title: "Access denied",
+      description: `This area is restricted to ${allowedRoles.join(" or ")} roles.`,
       variant: "destructive",
     });
-    return <Navigate to="/dashboard" replace />;
+    
+    // Direct users based on their role
+    if (userRole === "customer") {
+      return <Navigate to="/menu" replace />;
+    } else if (userRole === "staff") {
+      return <Navigate to="/dashboard" replace />;
+    } else {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
   
   return <>{children}</>;
