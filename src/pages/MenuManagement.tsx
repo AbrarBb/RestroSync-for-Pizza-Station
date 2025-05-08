@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -225,7 +224,8 @@ const MenuManagement = () => {
   });
 
   // Get unique categories from menu items
-  const categories = Array.from(new Set(menuItems.map(item => item.category)));
+  const categories = Array.from(new Set(menuItems.map(item => item.category)))
+    .filter(category => typeof category === 'string') as string[];
 
   // Get status color for badges
   const getStatusColor = (status: string) => {
@@ -357,7 +357,7 @@ const MenuManagement = () => {
                             </SelectTrigger>
                             <SelectContent>
                               {categories.length > 0 ? (
-                                categories.map(category => (
+                                categories.map((category) => (
                                   <SelectItem key={category} value={category}>
                                     {category.charAt(0).toUpperCase() + category.slice(1)}
                                   </SelectItem>

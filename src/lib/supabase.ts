@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 
 // These environment variables need to be set in your Supabase project
@@ -70,7 +69,12 @@ export type MenuItem = {
 export type Order = {
   id: string;
   customer_id?: string;
-  items: object[];
+  items: {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+  }[];
   status: "pending" | "preparing" | "ready" | "delivered" | "cancelled";
   total: number;
   order_type: "delivery" | "pickup" | "dine-in";
@@ -79,7 +83,7 @@ export type Order = {
   rider_id?: string;
   table_number?: string;
   payment_method?: string;
-  payment_status?: "paid" | "pending";
+  payment_status: "paid" | "pending";
   customer_name?: string; // Added for guest orders
   customer_email?: string; // Added for guest orders
   customer_phone?: string; // Added for guest orders
@@ -330,4 +334,3 @@ export const ordersService = {
     return data || [];
   }
 };
-

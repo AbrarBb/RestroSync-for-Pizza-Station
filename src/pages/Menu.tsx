@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -105,7 +104,7 @@ const Menu = () => {
   const processCheckout = async () => {
     try {
       // Prepare order data
-      const orderData = {
+      const orderData: any = {
         customer_id: user?.id,
         items: cart.map(item => ({
           id: item.id,
@@ -233,7 +232,7 @@ const Menu = () => {
               <Tabs defaultValue={categories[0] || "pizza"} className="w-full">
                 <TabsList className="mb-6">
                   {categories.length > 0 ? (
-                    categories.map(category => (
+                    categories.map((category) => (
                       <TabsTrigger key={category} value={category} className="capitalize">
                         {category}
                       </TabsTrigger>
@@ -248,7 +247,7 @@ const Menu = () => {
                 </TabsList>
                 
                 {categories.length > 0 ? (
-                  categories.map(category => (
+                  categories.map((category) => (
                     <TabsContent key={category} value={category} className="mt-0">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {filteredItems(category).length > 0 ? (
