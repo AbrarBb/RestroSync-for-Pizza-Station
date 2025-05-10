@@ -1,4 +1,3 @@
-
 // This file will be deprecated in favor of using the Supabase integration client directly
 
 import { createClient } from '@supabase/supabase-js';
@@ -51,12 +50,18 @@ export const transformOrderItems = (jsonItems: Json): Order['items'] => {
   
   // Handle the case when jsonItems is an array
   if (Array.isArray(jsonItems)) {
-    return jsonItems.map(item => ({
-      id: String(item?.id || ''),
-      name: String(item?.name || ''),
-      price: Number(item?.price || 0),
-      quantity: Number(item?.quantity || 1)
-    }));
+    return jsonItems.map(item => {
+      // Properly handle potentially undefined object
+      if (typeof item === 'object' && item !== null) {
+        return {
+          id: String(item.id || ''),
+          name: String(item.name || ''),
+          price: Number(item.price || 0),
+          quantity: Number(item.quantity || 1)
+        };
+      }
+      return { id: '', name: '', price: 0, quantity: 1 }; // fallback
+    });
   }
   
   // Handle the case when jsonItems is a string (parse it)
@@ -64,12 +69,17 @@ export const transformOrderItems = (jsonItems: Json): Order['items'] => {
     try {
       const parsed = JSON.parse(jsonItems);
       if (Array.isArray(parsed)) {
-        return parsed.map(item => ({
-          id: String(item?.id || ''),
-          name: String(item?.name || ''),
-          price: Number(item?.price || 0),
-          quantity: Number(item?.quantity || 1)
-        }));
+        return parsed.map(item => {
+          if (typeof item === 'object' && item !== null) {
+            return {
+              id: String(item.id || ''),
+              name: String(item.name || ''),
+              price: Number(item.price || 0),
+              quantity: Number(item.quantity || 1)
+            };
+          }
+          return { id: '', name: '', price: 0, quantity: 1 }; // fallback
+        });
       }
     } catch (e) {
       console.error('Error parsing order items:', e);
@@ -279,7 +289,8 @@ export const ordersService = {
     return data?.map(order => ({
       ...order,
       items: transformOrderItems(order.items),
-      status: order.status as Order['status']
+      status: order.status as Order['status'],
+      order_type: order.order_type as Order['order_type']
     })) || [];
   }
 };

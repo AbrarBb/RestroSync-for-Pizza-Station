@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +23,17 @@ export function RecentOrdersTable() {
   // Fetch recent orders
   const { data: orders = [], isLoading, error } = useQuery({
     queryKey: ["recentOrders"],
-    queryFn: () => ordersService.getRecentOrders(5),
+    queryFn: async () => {
+      const data = await ordersService.getRecentOrders(5);
+      
+      // Ensure all data is properly typed
+      return data.map(order => ({
+        ...order,
+        items: transformOrderItems(order.items),
+        status: order.status as Order['status'],
+        order_type: order.order_type as Order['order_type']
+      }));
+    },
   });
 
   const getStatusColor = (status: string) => {

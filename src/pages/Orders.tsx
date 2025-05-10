@@ -157,7 +157,8 @@ const Orders = () => {
     return data.map(order => ({
       ...order,
       items: transformOrderItems(order.items),
-      status: order.status as Order['status']
+      status: order.status as Order['status'],
+      order_type: order.order_type as Order['order_type']
     }));
   };
 
