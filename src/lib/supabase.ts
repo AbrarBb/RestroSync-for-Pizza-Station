@@ -1,3 +1,4 @@
+
 // This file will be deprecated in favor of using the Supabase integration client directly
 
 import { createClient } from '@supabase/supabase-js';
@@ -290,7 +291,8 @@ export const ordersService = {
       ...order,
       items: transformOrderItems(order.items),
       status: order.status as Order['status'],
-      order_type: order.order_type as Order['order_type']
+      order_type: order.order_type as Order['order_type'],
+      payment_status: order.payment_status as Order['payment_status']
     })) || [];
   }
 };

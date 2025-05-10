@@ -158,7 +158,8 @@ const Orders = () => {
       ...order,
       items: transformOrderItems(order.items),
       status: order.status as Order['status'],
-      order_type: order.order_type as Order['order_type']
+      order_type: order.order_type as Order['order_type'],
+      payment_status: order.payment_status as Order['payment_status']
     }));
   };
 
