@@ -36,6 +36,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const navigate = useNavigate();
 
+  // Helper function to determine user role
+  const determineUserRole = (email: string): UserRole => {
+    if (email.includes('admin')) {
+      return 'admin';
+    } else if (email.includes('staff')) {
+      return 'staff';
+    } else {
+      return 'customer';
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -44,10 +55,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session?.user ?? null);
         
-        // TODO: In a real app, you would fetch the user's role from a profile table
-        // For now, we'll assume any authenticated user is a staff user
+        // Determine role based on email
         if (session?.user) {
-          setUserRole('staff');
+          const email = session.user.email || '';
+          const role = determineUserRole(email);
+          setUserRole(role);
+          console.log('Set user role:', role);
         } else {
           setUserRole(null);
         }
@@ -60,9 +73,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       
-      // TODO: In a real app, you would fetch the user's role from a profile table
+      // Determine role based on email
       if (session?.user) {
-        setUserRole('staff');
+        const email = session.user.email || '';
+        const role = determineUserRole(email);
+        setUserRole(role);
+        console.log('Set user role from existing session:', role);
       } else {
         setUserRole(null);
       }
@@ -79,6 +95,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      
+      // Determine role based on email
+      const role = determineUserRole(email);
+      console.log('Signed in with role:', role);
+      
+      toast({
+        title: 'Sign in successful',
+        description: `Welcome back, you've signed in as ${role}`,
+      });
+      
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Error signing in:', error.message);

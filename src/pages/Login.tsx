@@ -5,18 +5,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
+import { Loader2, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
+  const [userType, setUserType] = useState("staff");
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
+
+  // Default credentials for easy access
+  const defaultCredentials = {
+    admin: {
+      email: "admin@pizzastation.com",
+      password: "admin123"
+    },
+    staff: {
+      email: "staff@pizzastation.com",
+      password: "staff123"
+    }
+  };
+
+  // Fill form with default credentials
+  const fillDefaultCredentials = (type: "admin" | "staff") => {
+    setEmail(defaultCredentials[type].email);
+    setPassword(defaultCredentials[type].password);
+    setUserType(type);
+  };
 
   // Redirect to dashboard if already logged in
   useEffect(() => {
@@ -39,6 +61,7 @@ const Login = () => {
     setIsLoading(true);
     try {
       await signIn(email, password);
+      // Role will be determined in AuthContext based on email
     } catch (error) {
       console.error("Sign in error:", error);
     } finally {
@@ -59,7 +82,8 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      await signUp(email, password);
+      // Pass the selected role during signup
+      await signUp(email, password, userType as any);
       setActiveTab("signin");
       toast({
         title: "Account created",
@@ -94,7 +118,7 @@ const Login = () => {
               Welcome to Pizza Station
             </CardTitle>
             <CardDescription className="text-center">
-              Enter your email to sign in to your account
+              Enter your credentials to sign in to your account
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-4">
@@ -148,6 +172,28 @@ const Login = () => {
                     )}
                   </Button>
                 </form>
+
+                <div className="mt-6 border-t pt-4">
+                  <p className="text-sm text-center mb-4 text-gray-500">Quick access with default credentials</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button 
+                      variant="outline" 
+                      className="flex items-center justify-center gap-2"
+                      onClick={() => fillDefaultCredentials("admin")}
+                    >
+                      <Shield className="h-4 w-4" />
+                      Admin
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="flex items-center justify-center gap-2"
+                      onClick={() => fillDefaultCredentials("staff")}
+                    >
+                      <Shield className="h-4 w-4" />
+                      Staff
+                    </Button>
+                  </div>
+                </div>
               </TabsContent>
               
               <TabsContent value="signup">
@@ -176,6 +222,24 @@ const Login = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">User Type</label>
+                    <RadioGroup value={userType} onValueChange={setUserType} className="flex gap-4">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="staff" id="staff" />
+                        <Label htmlFor="staff">Staff</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="admin" id="admin" />
+                        <Label htmlFor="admin">Admin</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="customer" id="customer" />
+                        <Label htmlFor="customer">Customer</Label>
+                      </div>
+                    </RadioGroup>
                   </div>
                   
                   <Button type="submit" className="w-full" disabled={isLoading}>
