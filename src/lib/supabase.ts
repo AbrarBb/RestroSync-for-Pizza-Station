@@ -1,3 +1,4 @@
+
 // This file will be deprecated in favor of using the Supabase integration client directly
 
 import { createClient } from '@supabase/supabase-js';
@@ -51,10 +52,10 @@ export const transformOrderItems = (jsonItems: Json): Order['items'] => {
   // Handle the case when jsonItems is an array
   if (Array.isArray(jsonItems)) {
     return jsonItems.map(item => ({
-      id: String(item.id || ''),
-      name: String(item.name || ''),
-      price: Number(item.price || 0),
-      quantity: Number(item.quantity || 1)
+      id: String(item?.id || ''),
+      name: String(item?.name || ''),
+      price: Number(item?.price || 0),
+      quantity: Number(item?.quantity || 1)
     }));
   }
   
@@ -64,10 +65,10 @@ export const transformOrderItems = (jsonItems: Json): Order['items'] => {
       const parsed = JSON.parse(jsonItems);
       if (Array.isArray(parsed)) {
         return parsed.map(item => ({
-          id: String(item.id || ''),
-          name: String(item.name || ''),
-          price: Number(item.price || 0),
-          quantity: Number(item.quantity || 1)
+          id: String(item?.id || ''),
+          name: String(item?.name || ''),
+          price: Number(item?.price || 0),
+          quantity: Number(item?.quantity || 1)
         }));
       }
     } catch (e) {
@@ -277,7 +278,8 @@ export const ordersService = {
     // Transform the orders to have properly typed items
     return data?.map(order => ({
       ...order,
-      items: transformOrderItems(order.items)
+      items: transformOrderItems(order.items),
+      status: order.status as Order['status']
     })) || [];
   }
 };

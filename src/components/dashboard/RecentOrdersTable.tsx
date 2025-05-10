@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,7 +55,7 @@ export function RecentOrdersTable() {
     }
   };
 
-  const formatOrderTime = (createdAt: string) => {
+  function formatOrderTime(createdAt: string) {
     const orderDate = new Date(createdAt);
     const now = new Date();
     const diffMs = now.getTime() - orderDate.getTime();
@@ -70,15 +69,15 @@ export function RecentOrdersTable() {
     
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  };
+  }
 
-  const formatOrderItems = (items: any[]) => {
+  function formatOrderItems(items: any[]) {
     if (!items || items.length === 0) return "No items";
     
     return items.slice(0, 3).map(item => 
       `${item.quantity || 1}× ${item.name}`
     ).join(', ') + (items.length > 3 ? `, +${items.length - 3} more` : '');
-  };
+  }
 
   const handleViewOrder = (order: Order) => {
     toast({

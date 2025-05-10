@@ -43,7 +43,10 @@ const Menu = () => {
       console.log("Fetching menu items in Menu component");
       const items = await menuItemsService.getAll();
       console.log("Menu items fetched:", items);
-      return items;
+      return items.map(item => ({
+        ...item,
+        status: item.status as MenuItem['status'] // Ensure proper typing
+      }));
     },
   });
   

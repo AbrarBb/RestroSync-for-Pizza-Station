@@ -117,14 +117,14 @@ const Orders = () => {
     }
   };
 
-  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+  const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
     try {
-      await ordersService.updateStatus(orderId, newStatus as Order['status']);
+      await ordersService.updateStatus(orderId, newStatus);
       toast({
         title: "Order Updated",
         description: `Order status updated to ${newStatus}.`,
       });
-      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -156,13 +156,14 @@ const Orders = () => {
     
     return data.map(order => ({
       ...order,
-      items: transformOrderItems(order.items)
+      items: transformOrderItems(order.items),
+      status: order.status as Order['status']
     }));
   };
 
   // In the useQuery function, add transformOrderItems:
   const { data: allOrders = [], isLoading } = useQuery({
-    queryKey: ['orders'],
+    queryKey: ["orders"],
     queryFn: async () => {
       const data = await ordersService.getAll();
       return processOrders(data);
