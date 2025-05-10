@@ -49,44 +49,56 @@ export type Order = {
 export const transformOrderItems = (jsonItems: Json): Order['items'] => {
   if (!jsonItems) return [];
   
-  // Handle the case when jsonItems is an array
+  // Function to safely transform a single item
+  const transformItem = (item: any): Order['items'][0] => {
+    if (typeof item !== 'object' || item === null) {
+      return { id: '', name: '', price: 0, quantity: 1 };
+    }
+    
+    return {
+      id: String(item.id || ''),
+      name: String(item.name || ''),
+      price: Number(item.price || 0),
+      quantity: Number(item.quantity || 1)
+    };
+  };
+  
+  // Handle array case
   if (Array.isArray(jsonItems)) {
-    return jsonItems.map(item => {
-      // Properly handle potentially undefined object
-      if (typeof item === 'object' && item !== null) {
-        return {
-          id: String(item.id || ''),
-          name: String(item.name || ''),
-          price: Number(item.price || 0),
-          quantity: Number(item.quantity || 1)
-        };
-      }
-      return { id: '', name: '', price: 0, quantity: 1 }; // fallback
-    });
+    return jsonItems.map(transformItem);
   }
   
-  // Handle the case when jsonItems is a string (parse it)
+  // Handle string case (parse JSON)
   if (typeof jsonItems === 'string') {
     try {
       const parsed = JSON.parse(jsonItems);
       if (Array.isArray(parsed)) {
-        return parsed.map(item => {
-          if (typeof item === 'object' && item !== null) {
-            return {
-              id: String(item.id || ''),
-              name: String(item.name || ''),
-              price: Number(item.price || 0),
-              quantity: Number(item.quantity || 1)
-            };
-          }
-          return { id: '', name: '', price: 0, quantity: 1 }; // fallback
-        });
+        return parsed.map(transformItem);
       }
     } catch (e) {
       console.error('Error parsing order items:', e);
     }
   }
   
+  // Handle object case with key-value pairs
+  if (typeof jsonItems === 'object' && jsonItems !== null) {
+    // Check if it's a non-array object that might contain items
+    if ('items' in jsonItems && Array.isArray(jsonItems.items)) {
+      return jsonItems.items.map(transformItem);
+    }
+    
+    // Last resort: try to convert the object itself to an array if possible
+    try {
+      const objValues = Object.values(jsonItems);
+      if (Array.isArray(objValues) && objValues.length > 0) {
+        return objValues.map(transformItem);
+      }
+    } catch (e) {
+      console.error('Error processing order items object:', e);
+    }
+  }
+  
+  // Default empty array if nothing else works
   return [];
 };
 
