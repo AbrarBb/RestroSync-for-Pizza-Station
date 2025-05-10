@@ -62,20 +62,24 @@ const Index = () => {
           <div className="flex flex-col md:flex-row items-center">
             <div className="md:w-1/2 mb-8 md:mb-0">
               <img 
-                src="/placeholder.svg" 
+                src="https://raw.githubusercontent.com/AbrarBb/University/main/Logo_pizza-station.jpg" 
                 alt="Pizza Station Restaurant" 
-                className="rounded-lg shadow-lg"
+                className="rounded-lg shadow-lg max-h-80 mx-auto"
               />
             </div>
             <div className="md:w-1/2 md:pl-12">
               <h2 className="text-3xl font-bold mb-4">About Pizza Station</h2>
               <p className="mb-4">
-                Founded in 2010, Pizza Station has been serving the community with authentic Italian pizzas made from fresh ingredients. 
-                Our commitment to quality and customer satisfaction has made us a favorite among pizza lovers.
+                Founded in 2010, Pizza Station has been serving the community of Dhaka with authentic Italian pizzas made from fresh ingredients. 
+                Our commitment to quality and customer satisfaction has made us a favorite among pizza lovers in Bangladesh.
               </p>
-              <p>
+              <p className="mb-4">
                 With our new management system, we're taking your pizza experience to the next level - whether you're dining in, 
                 taking out, or managing our restaurant operations.
+              </p>
+              <p>
+                <strong>Visit us:</strong> 1212 Aftab Nagar, Dhaka, Bangladesh<br />
+                <strong>Contact:</strong> +880 1700-000000
               </p>
             </div>
           </div>
@@ -88,13 +92,13 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <h3 className="text-xl font-bold mb-4">Pizza Station</h3>
-              <p>Your favorite pizza destination with the best management system in town.</p>
+              <p>Your favorite pizza destination in Dhaka with the best management system in town.</p>
             </div>
             <div>
               <h3 className="text-xl font-bold mb-4">Contact</h3>
-              <p>123 Pizza Street</p>
-              <p>Flavor City, FC 12345</p>
-              <p>Phone: (555) 123-4567</p>
+              <p>1212 Aftab Nagar</p>
+              <p>Dhaka, Bangladesh</p>
+              <p>Phone: +880 1700-000000</p>
             </div>
             <div>
               <h3 className="text-xl font-bold mb-4">Hours</h3>

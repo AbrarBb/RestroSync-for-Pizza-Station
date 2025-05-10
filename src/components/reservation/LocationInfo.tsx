@@ -8,10 +8,10 @@ const LocationInfo = () => {
       <div>
         <h4 className="font-medium">Pizza Station - Main Branch</h4>
         <p className="text-sm text-gray-600">
-          123 Pizza Street, Flavor City, FC 12345
+          1212 Aftab Nagar, Dhaka, Bangladesh
         </p>
         <p className="text-sm text-gray-600 mt-1">
-          For large parties (more than 10 people), please call us directly at (555) 123-4567
+          For large parties (more than 10 people), please call us directly at +880 1700-000000
         </p>
       </div>
     </div>

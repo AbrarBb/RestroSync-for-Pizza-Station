@@ -102,6 +102,17 @@ const Menu = () => {
   // Calculate total price
   const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
 
+  // Add Bangladesh payment methods
+  const paymentMethods = [
+    { id: 'cash', name: 'Cash on Delivery' },
+    { id: 'bkash', name: 'bKash' },
+    { id: 'nagad', name: 'Nagad' },
+    { id: 'rocket', name: 'Rocket' },
+    { id: 'card', name: 'Credit/Debit Card' }
+  ];
+  
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(paymentMethods[0].id);
+
   // Handle checkout process
   const handleCheckout = () => {
     // If user is logged in, process checkout directly
@@ -130,7 +141,8 @@ const Menu = () => {
         status: "pending" as const,
         order_type: "pickup" as const,
         created_at: new Date().toISOString(),
-        payment_status: "pending" as const
+        payment_status: "pending" as const,
+        payment_method: selectedPaymentMethod
       };
 
       // Add guest info if guest checkout
@@ -403,9 +415,26 @@ const Menu = () => {
                     required
                   />
                 </div>
+                
+                <div className="grid gap-2 mt-2">
+                  <Label htmlFor="payment-method">Payment Method</Label>
+                  <select
+                    id="payment-method"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={selectedPaymentMethod}
+                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                  >
+                    {paymentMethods.map(method => (
+                      <option key={method.id} value={method.id}>
+                        {method.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
                 <div className="flex items-center space-x-2">
                   <Label htmlFor="terms" className="text-sm text-gray-500">
-                    By proceeding, you agree to pay upfront before your order is processed.
+                    By proceeding, you agree to our terms and conditions.
                   </Label>
                 </div>
               </div>
@@ -413,7 +442,7 @@ const Menu = () => {
                 <Button type="button" variant="outline" onClick={() => setIsGuestCheckout(false)}>
                   Back
                 </Button>
-                <Button type="submit">Complete Purchase</Button>
+                <Button type="submit">Complete Order</Button>
               </DialogFooter>
             </form>
           ) : (

@@ -1,4 +1,3 @@
-
 // This file will be deprecated in favor of using the Supabase integration client directly
 
 import { createClient } from '@supabase/supabase-js';
@@ -83,8 +82,8 @@ export const transformOrderItems = (jsonItems: Json): Order['items'] => {
   // Handle object case with key-value pairs
   if (typeof jsonItems === 'object' && jsonItems !== null) {
     // Check if it's a non-array object that might contain items
-    if ('items' in jsonItems && Array.isArray(jsonItems.items)) {
-      return jsonItems.items.map(transformItem);
+    if ('items' in jsonItems && Array.isArray((jsonItems as any).items)) {
+      return ((jsonItems as any).items).map(transformItem);
     }
     
     // Last resort: try to convert the object itself to an array if possible
