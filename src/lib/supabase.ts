@@ -1,9 +1,9 @@
-
 // This file will be deprecated in favor of using the Supabase integration client directly
 
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/integrations/supabase/types';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
+import { Json } from '@/integrations/supabase/types';
 
 // Export the proper supabase client from the integration
 export const supabase = supabaseClient;
@@ -20,6 +20,7 @@ export type MenuItem = {
   created_at?: string;
 }
 
+// Updated Order type with proper items handling
 export type Order = {
   id: string;
   customer_id?: string;
@@ -38,62 +39,44 @@ export type Order = {
   table_number?: string;
   payment_method?: string;
   payment_status: "paid" | "pending";
-  customer_name?: string; // Added for guest orders
-  customer_email?: string; // Added for guest orders
-  customer_phone?: string; // Added for guest orders
+  customer_name?: string;
+  customer_email?: string;
+  customer_phone?: string;
 }
 
-export type Customer = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address?: string;
-  created_at?: string;
-}
-
-export type Reservation = {
-  id: string;
-  customer_id: string;
-  date: string;
-  time: string;
-  guests: number;
-  special_requests?: string;
-  status: "confirmed" | "cancelled" | "completed";
-  created_at?: string;
-}
-
-export type Staff = {
-  id: string;
-  name: string;
-  position: string;
-  phone: string;
-  email: string;
-  status: "active" | "on-leave" | "off-duty";
-  join_date: string;
-  salary: number;
-}
-
-export type DeliveryRider = {
-  id: string;
-  name: string;
-  phone: string;
-  status: "available" | "delivering" | "off-duty";
-  active_deliveries: number;
-  completed_today: number;
-  rating: number;
-  join_date: string;
-}
-
-export type InventoryItem = {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  threshold: number;
-  last_restocked: string;
-  supplier?: string;
-}
+// Helper function to transform Json to properly typed Order items
+export const transformOrderItems = (jsonItems: Json): Order['items'] => {
+  if (!jsonItems) return [];
+  
+  // Handle the case when jsonItems is an array
+  if (Array.isArray(jsonItems)) {
+    return jsonItems.map(item => ({
+      id: String(item.id || ''),
+      name: String(item.name || ''),
+      price: Number(item.price || 0),
+      quantity: Number(item.quantity || 1)
+    }));
+  }
+  
+  // Handle the case when jsonItems is a string (parse it)
+  if (typeof jsonItems === 'string') {
+    try {
+      const parsed = JSON.parse(jsonItems);
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => ({
+          id: String(item.id || ''),
+          name: String(item.name || ''),
+          price: Number(item.price || 0),
+          quantity: Number(item.quantity || 1)
+        }));
+      }
+    } catch (e) {
+      console.error('Error parsing order items:', e);
+    }
+  }
+  
+  return [];
+};
 
 // Database service for menu items
 export const menuItemsService = {
@@ -185,7 +168,7 @@ export const menuItemsService = {
     
     return true;
   },
-
+  
   uploadImage: async (file: File, path: string) => {
     console.log("Uploading image:", path);
     const { data, error } = await supabase.storage
@@ -278,7 +261,7 @@ export const ordersService = {
     
     return data;
   },
-
+  
   getRecentOrders: async (limit = 5) => {
     const { data, error } = await supabase
       .from('orders')
@@ -291,6 +274,10 @@ export const ordersService = {
       return [];
     }
     
-    return data || [];
+    // Transform the orders to have properly typed items
+    return data?.map(order => ({
+      ...order,
+      items: transformOrderItems(order.items)
+    })) || [];
   }
 };

@@ -1,4 +1,3 @@
-
 import { ReactNode, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,7 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
-  const { signOut, isAdmin, userRole } = useAuth();
+  const { signOut, userRole } = useAuth();
 
   // Redirect customers away from dashboard
   if (userRole === "customer") {

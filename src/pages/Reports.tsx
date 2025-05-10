@@ -17,10 +17,13 @@ import { useAuth } from "@/contexts/AuthContext";
 const Reports = () => {
   const [reportType, setReportType] = useState("sales");
   const [timeframe, setTimeframe] = useState("week");
-  const { isAdmin } = useAuth();
+  const { userRole } = useAuth();
+
+  // Use the userRole directly to check admin status
+  const isAdmin = userRole === 'admin';
 
   // Redirect if not admin (extra layer of protection)
-  if (!isAdmin()) {
+  if (!isAdmin) {
     return (
       <DashboardLayout>
         <div className="p-6">

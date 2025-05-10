@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -103,11 +104,14 @@ const Staff = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { isAdmin } = useAuth();
+  const { userRole } = useAuth();
+  
+  // Use the userRole directly to check admin status
+  const isAdmin = userRole === 'admin';
   
   // Redirect or show error if not admin - this is an extra layer of protection
   // since we already use ProtectedRoute in App.tsx
-  if (!isAdmin()) {
+  if (!isAdmin) {
     return (
       <DashboardLayout>
         <div className="p-6">

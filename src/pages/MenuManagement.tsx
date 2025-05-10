@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -528,7 +527,10 @@ const MenuManagement = () => {
                               variant="outline" 
                               size="sm"
                               onClick={() => {
-                                setEditingItem(item);
+                                setEditingItem({
+                                  ...item,
+                                  status: item.status as "active" | "out-of-stock" | "seasonal"
+                                });
                                 setDialogOpen(true);
                               }}
                             >

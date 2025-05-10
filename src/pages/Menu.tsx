@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -454,6 +453,9 @@ const MenuItemCard = ({ item, onAddToCart }: MenuItemProps) => {
   // Ensure image is displayed correctly
   const imageUrl = item.image_url || "/placeholder.svg";
   
+  // Cast the status to the proper type
+  const itemStatus = item.status as "active" | "out-of-stock" | "seasonal";
+  
   return (
     <Card className="overflow-hidden">
       <div className="relative h-48">
@@ -466,13 +468,13 @@ const MenuItemCard = ({ item, onAddToCart }: MenuItemProps) => {
             (e.target as HTMLImageElement).src = "/placeholder.svg";
           }}
         />
-        {item.status !== "active" && (
+        {itemStatus !== "active" && (
           <div className="absolute top-2 right-2">
             <Badge 
               variant="outline" 
-              className={`${item.status === "out-of-stock" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}
+              className={`${itemStatus === "out-of-stock" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}
             >
-              {item.status === "out-of-stock" ? "Out of stock" : "Seasonal"}
+              {itemStatus === "out-of-stock" ? "Out of stock" : "Seasonal"}
             </Badge>
           </div>
         )}

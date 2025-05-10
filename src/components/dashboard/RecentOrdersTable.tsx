@@ -17,7 +17,7 @@ import {
   MapPin,
   Loader2 
 } from "lucide-react";
-import { ordersService, Order } from "@/lib/supabase";
+import { ordersService, Order, transformOrderItems } from "@/lib/supabase";
 
 export function RecentOrdersTable() {
   // Fetch recent orders
@@ -132,7 +132,7 @@ export function RecentOrdersTable() {
             <TableRow key={order.id}>
               <TableCell className="font-medium">{order.id.substring(0, 8).toUpperCase()}</TableCell>
               <TableCell>{order.customer_name || "Unknown"}</TableCell>
-              <TableCell>{formatOrderItems(order.items as any[])}</TableCell>
+              <TableCell>{formatOrderItems(order.items)}</TableCell>
               <TableCell>
                 <Badge
                   variant="outline"
