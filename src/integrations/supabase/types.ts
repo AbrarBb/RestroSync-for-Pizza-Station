@@ -9,7 +9,93 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      menu_items: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          status: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          image_url?: string | null
+          name: string
+          price: number
+          status: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          status?: string
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          created_at: string
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          delivery_address: string | null
+          id: string
+          items: Json
+          order_type: string
+          payment_method: string | null
+          payment_status: string
+          rider_id: string | null
+          status: string
+          table_number: string | null
+          total: number
+        }
+        Insert: {
+          created_at?: string
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_address?: string | null
+          id?: string
+          items: Json
+          order_type: string
+          payment_method?: string | null
+          payment_status: string
+          rider_id?: string | null
+          status: string
+          table_number?: string | null
+          total: number
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_address?: string | null
+          id?: string
+          items?: Json
+          order_type?: string
+          payment_method?: string | null
+          payment_status?: string
+          rider_id?: string | null
+          status?: string
+          table_number?: string | null
+          total?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

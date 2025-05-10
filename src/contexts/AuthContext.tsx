@@ -1,287 +1,144 @@
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { Session, User } from "@supabase/supabase-js";
-import { getSupabase } from "@/lib/supabase";
-import { useNavigate } from "react-router-dom";
-import { toast } from "@/hooks/use-toast";
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User } from '@supabase/supabase-js';
+import { toast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
-export type UserRole = "admin" | "staff" | "customer";
+// Define user roles
+export type UserRole = 'admin' | 'staff' | 'customer';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  userRole: UserRole | null;
+  userRole: UserRole | null; 
   isLoading: boolean;
-  signIn: (email: string, password: string, role?: UserRole) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, role?: UserRole) => Promise<void>;
   signOut: () => Promise<void>;
-  isSupabaseConnected: boolean;
-  isAdmin: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    try {
-      const supabase = getSupabase();
-      
-      // If we're using a mock client, we'll handle auth differently
-      const isMockClient = !import.meta.env.VITE_SUPABASE_URL;
-      
-      if (isMockClient) {
-        console.log("Using mock authentication (no Supabase credentials)");
-        setIsSupabaseConnected(false);
-        
-        // Check local storage for session info
-        const storedUser = localStorage.getItem('mockUser');
-        const storedRole = localStorage.getItem('mockUserRole');
-        
-        if (storedUser && storedRole) {
-          // Mock user object
-          const mockUser = JSON.parse(storedUser);
-          setUser(mockUser);
-          setUserRole(storedRole as UserRole);
-        }
-        
-        setIsLoading(false);
-        return;
-      }
-      
-      // For real Supabase client
-      setIsSupabaseConnected(true);
-      
-      // Get initial session
-      supabase.auth.getSession().then(({ data: { session } }) => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Get user role from local storage if exists
+        // TODO: In a real app, you would fetch the user's role from a profile table
+        // For now, we'll assume any authenticated user is a staff user
         if (session?.user) {
-          const storedRole = localStorage.getItem(`userRole_${session.user.id}`);
-          setUserRole(storedRole as UserRole || "customer");
+          setUserRole('staff');
+        } else {
+          setUserRole(null);
         }
-        
-        setIsLoading(false);
-      });
+      }
+    );
 
-      // Listen for auth changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        (_event, session) => {
-          setSession(session);
-          setUser(session?.user ?? null);
-          
-          // Get user role when auth state changes
-          if (session?.user) {
-            const storedRole = localStorage.getItem(`userRole_${session.user.id}`);
-            setUserRole(storedRole as UserRole || "customer");
-          } else {
-            setUserRole(null);
-          }
-          
-          setIsLoading(false);
-        }
-      );
-
-      return () => subscription.unsubscribe();
-    } catch (error) {
-      console.error("Supabase connection error:", error);
-      setIsSupabaseConnected(false);
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Got existing session:', session?.user?.id);
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      // TODO: In a real app, you would fetch the user's role from a profile table
+      if (session?.user) {
+        setUserRole('staff');
+      } else {
+        setUserRole(null);
+      }
+      
       setIsLoading(false);
-    }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const signIn = async (email: string, password: string, role: UserRole = "customer") => {
+  const signIn = async (email: string, password: string) => {
     try {
-      setIsLoading(true);
-      const supabase = getSupabase();
-      
-      // If we're using a mock client, handle auth manually
-      if (!import.meta.env.VITE_SUPABASE_URL) {
-        // Create a mock user
-        const mockUser = {
-          id: `mock-${Date.now()}`,
-          email: email,
-          created_at: new Date().toISOString(),
-        };
-        
-        // Store in localStorage
-        localStorage.setItem('mockUser', JSON.stringify(mockUser));
-        localStorage.setItem('mockUserRole', role);
-        
-        setUser(mockUser as any);
-        setUserRole(role);
-        
-        toast({
-          title: "Welcome back!",
-          description: `You've successfully signed in as ${role}.`,
-        });
-        
-        navigate("/dashboard");
-        return;
-      }
-      
-      // For real Supabase client
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (data.user) {
-        // Store role in local storage
-        localStorage.setItem(`userRole_${data.user.id}`, role);
-        setUserRole(role);
-        
-        toast({
-          title: "Welcome back!",
-          description: `You've successfully signed in as ${role}.`,
-        });
-        
-        navigate("/dashboard");
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      navigate('/dashboard');
     } catch (error: any) {
+      console.error('Error signing in:', error.message);
       toast({
-        title: "Sign in failed",
+        title: 'Sign in failed',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const signUp = async (email: string, password: string, role: UserRole = "customer") => {
+  const signUp = async (email: string, password: string, role: UserRole = 'customer') => {
     try {
-      setIsLoading(true);
-      const supabase = getSupabase();
-      
-      // If we're using a mock client, handle auth manually
-      if (!import.meta.env.VITE_SUPABASE_URL) {
-        // Create a mock user
-        const mockUser = {
-          id: `mock-${Date.now()}`,
-          email: email,
-          created_at: new Date().toISOString(),
-        };
-        
-        // Store in localStorage
-        localStorage.setItem('mockUser', JSON.stringify(mockUser));
-        localStorage.setItem('mockUserRole', role);
-        
-        setUser(mockUser as any);
-        setUserRole(role);
-        
-        toast({
-          title: "Account created",
-          description: "Your account has been created successfully.",
-        });
-        
-        navigate("/dashboard");
-        return;
-      }
-      
-      // For real Supabase client
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (data.user) {
-        // Store role in local storage
-        localStorage.setItem(`userRole_${data.user.id}`, role);
-        setUserRole(role);
-        
-        toast({
-          title: "Account created",
-          description: "Please check your email for verification.",
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Sign up failed",
-        description: error.message,
-        variant: "destructive",
+      const { error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            role,
+          }
+        }
       });
-    } finally {
-      setIsLoading(false);
+      if (error) throw error;
+      toast({
+        title: 'Sign up successful',
+        description: 'Please check your email to confirm your account.',
+      });
+    } catch (error: any) {
+      console.error('Error signing up:', error.message);
+      toast({
+        title: 'Sign up failed',
+        description: error.message,
+        variant: 'destructive',
+      });
     }
   };
 
   const signOut = async () => {
     try {
-      const supabase = getSupabase();
-      
-      // If we're using a mock client, handle auth manually
-      if (!import.meta.env.VITE_SUPABASE_URL) {
-        localStorage.removeItem('mockUser');
-        localStorage.removeItem('mockUserRole');
-        setUser(null);
-        setUserRole(null);
-        
-        toast({
-          title: "Signed out",
-          description: "You've been successfully signed out.",
-        });
-        
-        navigate("/login");
-        return;
-      }
-      
-      // For real Supabase client
-      await supabase.auth.signOut();
-      // Clear role from local storage
-      if (user?.id) {
-        localStorage.removeItem(`userRole_${user.id}`);
-      }
-      setUserRole(null);
-      toast({
-        title: "Signed out",
-        description: "You've been successfully signed out.",
-      });
-      navigate("/login");
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      navigate('/login');
     } catch (error: any) {
+      console.error('Error signing out:', error.message);
       toast({
-        title: "Sign out failed",
+        title: 'Sign out failed',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     }
   };
 
-  const isAdmin = () => userRole === "admin";
+  const value = {
+    user,
+    session,
+    userRole,
+    isLoading,
+    signIn,
+    signUp,
+    signOut,
+  };
 
-  return (
-    <AuthContext.Provider
-      value={{ 
-        user, 
-        session, 
-        userRole,
-        isLoading, 
-        signIn, 
-        signUp, 
-        signOut, 
-        isSupabaseConnected,
-        isAdmin 
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-}
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
