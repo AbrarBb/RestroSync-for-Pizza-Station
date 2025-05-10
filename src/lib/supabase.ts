@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 // These environment variables need to be set in your Supabase project
@@ -5,8 +6,29 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Create a mock storage for development when credentials aren't available
-const mockMenuItems: MenuItem[] = [];
-const mockOrders: Order[] = [];
+// Using localStorage to persist the data between page reloads
+const getInitialMenuItems = (): MenuItem[] => {
+  const storedItems = localStorage.getItem('mockMenuItems');
+  return storedItems ? JSON.parse(storedItems) : [];
+};
+
+const getInitialOrders = (): Order[] => {
+  const storedOrders = localStorage.getItem('mockOrders');
+  return storedOrders ? JSON.parse(storedOrders) : [];
+};
+
+let mockMenuItems: MenuItem[] = getInitialMenuItems();
+let mockOrders: Order[] = getInitialOrders();
+
+// Update localStorage when mockMenuItems changes
+const updateMenuItemsStorage = () => {
+  localStorage.setItem('mockMenuItems', JSON.stringify(mockMenuItems));
+};
+
+// Update localStorage when mockOrders changes
+const updateOrdersStorage = () => {
+  localStorage.setItem('mockOrders', JSON.stringify(mockOrders));
+};
 
 // Create a mock client for development when credentials aren't available
 const mockSupabaseClient = {
@@ -52,6 +74,7 @@ const mockSupabaseClient = {
           })) as MenuItem[];
           
           mockMenuItems.push(...newItems);
+          updateMenuItemsStorage();
           return Promise.resolve({ data: newItems, error: null });
         },
         update: (item: Partial<MenuItem>) => ({
@@ -59,6 +82,7 @@ const mockSupabaseClient = {
             const index = mockMenuItems.findIndex(i => i[field as keyof MenuItem] === value);
             if (index !== -1) {
               mockMenuItems[index] = { ...mockMenuItems[index], ...item };
+              updateMenuItemsStorage();
             }
             return Promise.resolve({ data: mockMenuItems[index] || null, error: null });
           }
@@ -68,6 +92,7 @@ const mockSupabaseClient = {
             const index = mockMenuItems.findIndex(i => i[field as keyof MenuItem] === value);
             if (index !== -1) {
               mockMenuItems.splice(index, 1);
+              updateMenuItemsStorage();
             }
             return Promise.resolve({ data: null, error: null });
           }
@@ -105,6 +130,7 @@ const mockSupabaseClient = {
           })) as Order[];
           
           mockOrders.push(...newOrders);
+          updateOrdersStorage();
           return Promise.resolve({ data: newOrders, error: null });
         },
         update: (order: Partial<Order>) => ({
@@ -112,6 +138,7 @@ const mockSupabaseClient = {
             const index = mockOrders.findIndex(o => o[field as keyof Order] === value);
             if (index !== -1) {
               mockOrders[index] = { ...mockOrders[index], ...order };
+              updateOrdersStorage();
             }
             return Promise.resolve({ data: mockOrders[index] || null, error: null });
           }

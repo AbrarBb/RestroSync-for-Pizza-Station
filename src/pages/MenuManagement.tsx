@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -19,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -50,13 +50,19 @@ const MenuManagement = () => {
   
   const queryClient = useQueryClient();
   
+  // Force refetch menu items when component mounts
+  useEffect(() => {
+    console.log("MenuManagement component mounted, invalidating queries");
+    queryClient.invalidateQueries({ queryKey: ["menuItems"] });
+  }, [queryClient]);
+  
   // Fetch menu items with better error handling
   const { data: menuItems = [], isLoading } = useQuery({
     queryKey: ["menuItems"],
     queryFn: async () => {
       console.log("Fetching menu items in MenuManagement component");
       const items = await menuItemsService.getAll();
-      console.log("Menu items fetched:", items);
+      console.log("Menu items fetched:", items?.length || 0);
       return items;
     },
   });
@@ -77,7 +83,7 @@ const MenuManagement = () => {
       setDialogOpen(false);
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error in create mutation:", error);
       toast({
         title: "Failed to add item",
@@ -102,7 +108,7 @@ const MenuManagement = () => {
       setDialogOpen(false);
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error in update mutation:", error);
       toast({
         title: "Failed to update item",
@@ -125,7 +131,7 @@ const MenuManagement = () => {
         description: "Menu item has been deleted successfully.",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error in delete mutation:", error);
       toast({
         title: "Failed to delete item",
@@ -243,6 +249,9 @@ const MenuManagement = () => {
   const categories = Array.from(new Set(menuItems.map(item => item.category)))
     .filter(category => typeof category === 'string') as string[];
 
+  // Provide default categories if none exist
+  const availableCategories = categories.length > 0 ? categories : ["pizza", "sides", "drinks"];
+
   // Get status color for badges
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -313,12 +322,13 @@ const MenuManagement = () => {
                 />
               </div>
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={() => setEditingItem(null)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Item
-                  </Button>
-                </DialogTrigger>
+                <Button onClick={() => {
+                  setEditingItem(null);
+                  setDialogOpen(true);
+                }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
                 <DialogContent className="max-w-md">
                   <DialogHeader>
                     <DialogTitle>
@@ -372,19 +382,11 @@ const MenuManagement = () => {
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                             <SelectContent>
-                              {categories.length > 0 ? (
-                                categories.map((category) => (
-                                  <SelectItem key={category} value={category}>
-                                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <>
-                                  <SelectItem value="pizza">Pizza</SelectItem>
-                                  <SelectItem value="sides">Sides</SelectItem>
-                                  <SelectItem value="drinks">Drinks</SelectItem>
-                                </>
-                              )}
+                              {availableCategories.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                                </SelectItem>
+                              ))}
                               <SelectItem value="new">+ Add New Category</SelectItem>
                             </SelectContent>
                           </Select>
@@ -459,7 +461,7 @@ const MenuManagement = () => {
               >
                 All
               </Button>
-              {categories.map((category) => (
+              {availableCategories.map((category) => (
                 <Button
                   key={category}
                   variant={categoryFilter === category ? "default" : "outline"}
@@ -476,9 +478,16 @@ const MenuManagement = () => {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="ml-2 text-gray-500">Loading menu items...</p>
               </div>
+            ) : menuItems.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-gray-500 text-xl">No menu items found</p>
+                <p className="text-gray-400 text-sm mt-2">
+                  Add your first menu item by clicking the "Add Item" button
+                </p>
+              </div>
             ) : filteredItems.length === 0 ? (
               <div className="text-center py-20">
-                <p className="text-gray-500">No menu items found</p>
+                <p className="text-gray-500">No menu items found matching your search</p>
                 {searchTerm && (
                   <p className="text-gray-400 text-sm mt-1">
                     Try adjusting your search or filter

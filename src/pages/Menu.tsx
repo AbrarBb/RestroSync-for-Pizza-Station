@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -9,7 +10,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, Search, Plus, Minus, User, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { menuItemsService, ordersService, MenuItem } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,12 @@ const Menu = () => {
   const [guestInfo, setGuestInfo] = useState({ name: "", email: "", phone: "" });
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Force refetch menu items when component mounts
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["menuItems"] });
+  }, [queryClient]);
 
   // Fetch menu items with better error handling
   const { data: menuItems = [], isLoading, isError } = useQuery({
@@ -231,11 +237,16 @@ const Menu = () => {
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
             <p className="text-gray-500">Loading menu items...</p>
           </div>
+        ) : menuItems.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-gray-500 text-xl">No menu items available</p>
+            <p className="text-gray-400 mt-2">Please check back later or contact the restaurant</p>
+          </div>
         ) : (
           <div className="flex flex-col md:flex-row gap-6">
             {/* Menu Items */}
             <div className="flex-grow">
-              <Tabs defaultValue={categories[0] || "pizza"} className="w-full">
+              <Tabs defaultValue={categories.length > 0 ? categories[0] : "pizza"} className="w-full">
                 <TabsList className="mb-6">
                   {categories.length > 0 ? (
                     categories.map((category: string) => (
