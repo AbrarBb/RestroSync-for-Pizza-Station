@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Order, transformOrderItems } from "@/lib/supabase";
 import { OrderMessage, DeliveryAssignment, Coupon } from "@/integrations/supabase/database.types";
-import { safeQuery } from "./supabaseHelper";
+import { safeQuery, safeCast } from "./supabaseHelper";
 
 export const orderService = {
   // Get customer orders
@@ -46,7 +46,7 @@ export const orderService = {
       
       if (error) throw error;
       
-      return data as OrderMessage[];
+      return safeCast<OrderMessage[]>(data);
     } catch (error: any) {
       console.error('Error fetching order messages:', error);
       return [];
@@ -57,7 +57,7 @@ export const orderService = {
   sendOrderMessage: async (message: Omit<OrderMessage, 'id' | 'created_at'>): Promise<boolean> => {
     try {
       const { error } = await safeQuery('order_messages')
-        .insert([message]);
+        .insert([message as any]);
       
       if (error) throw error;
       
@@ -81,7 +81,7 @@ export const orderService = {
           ...assignment,
           assigned_at: new Date().toISOString(),
           delivered_at: null
-        }]);
+        } as any]);
       
       if (error) throw error;
       
@@ -120,7 +120,7 @@ export const orderService = {
       }
       
       const { error } = await safeQuery('delivery_assignments')
-        .update(updates)
+        .update(updates as any)
         .eq('order_id', orderId);
       
       if (error) throw error;
@@ -163,7 +163,7 @@ export const orderService = {
         throw error;
       }
       
-      return data as DeliveryAssignment;
+      return safeCast<DeliveryAssignment>(data);
     } catch (error: any) {
       console.error('Error fetching delivery assignment:', error);
       return null;
@@ -181,7 +181,7 @@ export const orderService = {
       
       if (error) throw error;
       
-      const coupon = data as Coupon;
+      const coupon = safeCast<Coupon>(data);
       
       // Check if coupon is expired
       if (coupon.expiry_date && new Date(coupon.expiry_date) < new Date()) {

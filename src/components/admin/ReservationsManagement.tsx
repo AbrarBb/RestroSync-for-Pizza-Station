@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle, XCircle, MessageSquare } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { safeQuery } from "@/lib/supabaseHelper";
+import { safeQuery, safeCast } from "@/lib/supabaseHelper";
+import { Reservation } from "@/integrations/supabase/database.types";
 import { 
   Dialog,
   DialogContent,
@@ -17,18 +18,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-
-interface Reservation {
-  id: string;
-  customer_name: string;
-  customer_email: string;
-  customer_phone: string;
-  guest_count: number;
-  reservation_date: string;
-  special_requests: string | null;
-  status: 'pending' | 'confirmed' | 'cancelled';
-  created_at: string;
-}
 
 const ReservationsManagement = () => {
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -47,7 +36,7 @@ const ReservationsManagement = () => {
         schema: 'public',
         table: 'reservations'
       }, payload => {
-        setReservations(prev => [payload.new as Reservation, ...prev]);
+        setReservations(prev => [safeCast<Reservation>(payload.new), ...prev]);
       })
       .subscribe();
     
@@ -65,7 +54,7 @@ const ReservationsManagement = () => {
       
       if (error) throw error;
       
-      setReservations(data as Reservation[]);
+      setReservations(safeCast<Reservation[]>(data));
     } catch (error: any) {
       console.error('Error fetching reservations:', error.message);
       toast({

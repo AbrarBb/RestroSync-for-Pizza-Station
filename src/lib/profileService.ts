@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ProfileData } from "@/integrations/supabase/database.types";
-import { safeQuery } from "./supabaseHelper";
+import { safeQuery, safeCast } from "./supabaseHelper";
 
 export const profileService = {
   // Fetch user profile
@@ -18,7 +18,7 @@ export const profileService = {
         return null;
       }
       
-      return data as ProfileData;
+      return safeCast<ProfileData>(data);
     } catch (error) {
       console.error('Error in getProfile:', error);
       return null;
