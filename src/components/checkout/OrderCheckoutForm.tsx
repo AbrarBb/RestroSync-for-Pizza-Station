@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -101,8 +100,6 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
       payment_status: "pending",
       status: "pending",
       special_requests: formData.specialRequests,
-      applied_coupon: couponApplied ? formData.couponCode : null,
-      discount
     };
     
     const success = await onSubmitOrder(orderData);

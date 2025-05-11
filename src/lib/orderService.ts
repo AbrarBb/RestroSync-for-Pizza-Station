@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Order, transformOrderItems } from "@/lib/supabase";
@@ -46,7 +45,7 @@ export const orderService = {
       
       if (error) throw error;
       
-      return safeCast<OrderMessage[]>(data);
+      return safeCast<OrderMessage[]>(data || []);
     } catch (error: any) {
       console.error('Error fetching order messages:', error);
       return [];
@@ -170,18 +169,33 @@ export const orderService = {
     }
   },
   
-  // Apply coupon code
+  // Apply coupon code - fixed to properly handle the coupon application
   applyCoupon: async (code: string, orderTotal: number): Promise<{ discount: number; message: string } | null> => {
     try {
       const { data, error } = await safeQuery('coupons')
         .select('*')
         .eq('code', code)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return {
+            discount: 0,
+            message: "Invalid coupon code"
+          };
+        }
+        throw error;
+      }
       
       const coupon = safeCast<Coupon>(data);
+      
+      if (!coupon) {
+        return {
+          discount: 0,
+          message: "Invalid coupon code"
+        };
+      }
       
       // Check if coupon is expired
       if (coupon.expiry_date && new Date(coupon.expiry_date) < new Date()) {
