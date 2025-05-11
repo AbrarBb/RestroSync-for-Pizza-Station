@@ -38,3 +38,15 @@ export interface Coupon {
   expiry_date: string | null;
   is_active: boolean;
 }
+
+export interface Reservation {
+  id: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  guest_count: number;
+  reservation_date: string;
+  special_requests: string | null;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  created_at: string;
+}

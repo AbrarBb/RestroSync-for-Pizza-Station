@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Order, transformOrderItems } from "@/lib/supabase";
-import { OrderMessage, DeliveryAssignment } from "@/integrations/supabase/database.types";
+import { OrderMessage, DeliveryAssignment, Coupon } from "@/integrations/supabase/database.types";
 
 export const orderService = {
   // Get customer orders
@@ -46,7 +46,7 @@ export const orderService = {
       
       if (error) throw error;
       
-      return data as OrderMessage[];
+      return (data as unknown) as OrderMessage[];
     } catch (error: any) {
       console.error('Error fetching order messages:', error);
       return [];
@@ -58,7 +58,7 @@ export const orderService = {
     try {
       const { error } = await supabase
         .from('order_messages')
-        .insert([message]);
+        .insert([message as any]);
       
       if (error) throw error;
       
@@ -83,7 +83,7 @@ export const orderService = {
           ...assignment,
           assigned_at: new Date().toISOString(),
           delivered_at: null
-        }]);
+        } as any]);
       
       if (error) throw error;
       
@@ -123,7 +123,7 @@ export const orderService = {
       
       const { error } = await supabase
         .from('delivery_assignments')
-        .update(updates)
+        .update(updates as any)
         .eq('order_id', orderId);
       
       if (error) throw error;
@@ -167,7 +167,7 @@ export const orderService = {
         throw error;
       }
       
-      return data as DeliveryAssignment;
+      return (data as unknown) as DeliveryAssignment;
     } catch (error: any) {
       console.error('Error fetching delivery assignment:', error);
       return null;
@@ -186,7 +186,7 @@ export const orderService = {
       
       if (error) throw error;
       
-      const coupon = data as unknown as Coupon;
+      const coupon = (data as unknown) as Coupon;
       
       // Check if coupon is expired
       if (coupon.expiry_date && new Date(coupon.expiry_date) < new Date()) {

@@ -66,7 +66,7 @@ const ReservationsManagement = () => {
       
       if (error) throw error;
       
-      setReservations(data as Reservation[]);
+      setReservations((data as unknown) as Reservation[]);
     } catch (error: any) {
       console.error('Error fetching reservations:', error.message);
       toast({

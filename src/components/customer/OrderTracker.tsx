@@ -4,13 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { orderService } from "@/lib/orderService";
+import { supabase } from "@/integrations/supabase/client"; // Added the missing import
 import { useAuth } from "@/contexts/AuthContext";
 import { OrderMessage, DeliveryAssignment } from "@/integrations/supabase/database.types";
 import { Order, transformOrderItems } from "@/lib/supabase";
-import { Loader2, MessageSquare, Send, Package, User, MapPin, CalendarClock, Tag } from "lucide-react";
+import { Loader2, MessageSquare, Send, Package, User, MapPin, CalendarClock } from "lucide-react";
 
 interface OrderTrackerProps {
   orderId: string;
