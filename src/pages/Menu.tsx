@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { menuItemsService, ordersService, MenuItem } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
+import OrderCheckoutForm from "@/components/checkout/OrderCheckoutForm";
 
 // Cart item interface
 interface CartItem {
@@ -27,6 +29,7 @@ const Menu = () => {
   const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false);
   const [isGuestCheckout, setIsGuestCheckout] = useState(false);
   const [guestInfo, setGuestInfo] = useState({ name: "", email: "", phone: "" });
+  const [isFullCheckoutOpen, setIsFullCheckoutOpen] = useState(false);
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -115,9 +118,9 @@ const Menu = () => {
 
   // Handle checkout process
   const handleCheckout = () => {
-    // If user is logged in, process checkout directly
+    // If user is logged in, proceed to full checkout form
     if (user) {
-      processCheckout();
+      setIsFullCheckoutOpen(true);
       return;
     }
     
@@ -125,12 +128,14 @@ const Menu = () => {
     setIsCheckoutDialogOpen(true);
   };
 
-  // Process the checkout
-  const processCheckout = async () => {
+  // Process the checkout for guest users
+  const processGuestCheckout = async () => {
     try {
       // Prepare order data
       const orderData: any = {
-        customer_id: user?.id,
+        customer_name: guestInfo.name,
+        customer_email: guestInfo.email,
+        customer_phone: guestInfo.phone,
         items: cart.map(item => ({
           id: item.id,
           name: item.name,
@@ -145,22 +150,13 @@ const Menu = () => {
         payment_method: selectedPaymentMethod
       };
 
-      // Add guest info if guest checkout
-      if (isGuestCheckout && !user) {
-        orderData.customer_name = guestInfo.name;
-        orderData.customer_email = guestInfo.email;
-        orderData.customer_phone = guestInfo.phone;
-      }
-
       // Create order
       await ordersService.create(orderData);
 
       // Show success toast
       toast({
         title: "Order Placed",
-        description: isGuestCheckout 
-          ? `Thank you ${guestInfo.name}! Your order has been placed successfully.` 
-          : "Your order has been placed successfully!",
+        description: `Thank you ${guestInfo.name}! Your order has been placed successfully.`,
       });
 
       // Reset cart and checkout state
@@ -168,11 +164,6 @@ const Menu = () => {
       setIsCheckoutDialogOpen(false);
       setIsGuestCheckout(false);
       setGuestInfo({ name: "", email: "", phone: "" });
-
-      // Redirect to orders page if user is logged in
-      if (user) {
-        navigate('/orders');
-      }
     } catch (error) {
       console.error("Error placing order:", error);
       toast({
@@ -186,7 +177,33 @@ const Menu = () => {
   // Handle guest checkout form submission
   const handleGuestCheckoutSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    processCheckout();
+    processGuestCheckout();
+  };
+  
+  // Handle authenticated user order submission
+  const handleSubmitOrder = async (orderData: any): Promise<boolean> => {
+    try {
+      // Create order
+      await ordersService.create(orderData);
+      
+      // Reset cart and checkout state
+      setCart([]);
+      setIsFullCheckoutOpen(false);
+      
+      // Show success toast
+      toast({
+        title: "Order Placed Successfully",
+        description: "Your order has been placed and is being processed.",
+      });
+      
+      // Redirect to orders page
+      navigate('/orders');
+      
+      return true;
+    } catch (error) {
+      console.error("Error placing order:", error);
+      return false;
+    }
   };
 
   return (
@@ -463,6 +480,24 @@ const Menu = () => {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Full Checkout Dialog for Logged In Users */}
+      <Dialog open={isFullCheckoutOpen} onOpenChange={setIsFullCheckoutOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Complete Your Order</DialogTitle>
+            <DialogDescription>
+              Review your items and provide delivery information to complete your purchase.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <OrderCheckoutForm 
+            items={cart}
+            subtotal={cartTotal}
+            onSubmitOrder={handleSubmitOrder}
+          />
         </DialogContent>
       </Dialog>
 
