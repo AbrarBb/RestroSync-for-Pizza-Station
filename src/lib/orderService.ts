@@ -1,0 +1,227 @@
+
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { Order, transformOrderItems } from "@/lib/supabase";
+import { OrderMessage, DeliveryAssignment } from "@/integrations/supabase/database.types";
+
+export const orderService = {
+  // Get customer orders
+  getCustomerOrders: async (customerId: string): Promise<Order[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Transform the orders to have properly typed items
+      return data?.map(order => ({
+        ...order,
+        items: transformOrderItems(order.items),
+        status: order.status as Order['status'],
+        order_type: order.order_type as Order['order_type'],
+        payment_status: order.payment_status as Order['payment_status']
+      })) || [];
+    } catch (error: any) {
+      console.error('Error fetching customer orders:', error);
+      toast({
+        title: "Failed to load orders",
+        description: error.message,
+        variant: "destructive",
+      });
+      return [];
+    }
+  },
+  
+  // Get order messages
+  getOrderMessages: async (orderId: string): Promise<OrderMessage[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('order_messages')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      
+      return data as OrderMessage[];
+    } catch (error: any) {
+      console.error('Error fetching order messages:', error);
+      return [];
+    }
+  },
+  
+  // Send order message
+  sendOrderMessage: async (message: Omit<OrderMessage, 'id' | 'created_at'>): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('order_messages')
+        .insert([message]);
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error sending order message:', error);
+      toast({
+        title: "Failed to send message",
+        description: error.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  },
+  
+  // Assign delivery driver
+  assignDeliveryDriver: async (assignment: Omit<DeliveryAssignment, 'id' | 'assigned_at' | 'delivered_at'>): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('delivery_assignments')
+        .insert([{
+          ...assignment,
+          assigned_at: new Date().toISOString(),
+          delivered_at: null
+        }]);
+      
+      if (error) throw error;
+      
+      // Update order status to "delivering"
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({ status: 'delivering' })
+        .eq('id', assignment.order_id);
+      
+      if (orderError) throw orderError;
+      
+      toast({
+        title: "Driver assigned",
+        description: `${assignment.driver_name} has been assigned to this order.`,
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error assigning delivery driver:', error);
+      toast({
+        title: "Failed to assign driver",
+        description: error.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  },
+  
+  // Update delivery status
+  updateDeliveryStatus: async (orderId: string, status: DeliveryAssignment['status']): Promise<boolean> => {
+    try {
+      const updates: Partial<DeliveryAssignment> = { status };
+      
+      if (status === 'delivered') {
+        updates.delivered_at = new Date().toISOString();
+      }
+      
+      const { error } = await supabase
+        .from('delivery_assignments')
+        .update(updates)
+        .eq('order_id', orderId);
+      
+      if (error) throw error;
+      
+      // Update order status if delivered
+      if (status === 'delivered') {
+        const { error: orderError } = await supabase
+          .from('orders')
+          .update({ status: 'delivered' })
+          .eq('id', orderId);
+        
+        if (orderError) throw orderError;
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error updating delivery status:', error);
+      toast({
+        title: "Failed to update status",
+        description: error.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  },
+  
+  // Get delivery assignment for an order
+  getDeliveryAssignment: async (orderId: string): Promise<DeliveryAssignment | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('delivery_assignments')
+        .select('*')
+        .eq('order_id', orderId)
+        .single();
+      
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No delivery assignment found
+          return null;
+        }
+        throw error;
+      }
+      
+      return data as DeliveryAssignment;
+    } catch (error: any) {
+      console.error('Error fetching delivery assignment:', error);
+      return null;
+    }
+  },
+  
+  // Apply coupon code
+  applyCoupon: async (code: string, orderTotal: number): Promise<{ discount: number; message: string } | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', code)
+        .eq('is_active', true)
+        .single();
+      
+      if (error) throw error;
+      
+      const coupon = data as unknown as Coupon;
+      
+      // Check if coupon is expired
+      if (coupon.expiry_date && new Date(coupon.expiry_date) < new Date()) {
+        return {
+          discount: 0,
+          message: "This coupon has expired"
+        };
+      }
+      
+      // Check minimum order amount
+      if (coupon.minimum_order && orderTotal < coupon.minimum_order) {
+        return {
+          discount: 0,
+          message: `Minimum order amount is ৳${coupon.minimum_order}`
+        };
+      }
+      
+      // Calculate discount
+      let discount = 0;
+      if (coupon.discount_amount) {
+        discount = coupon.discount_amount;
+      } else if (coupon.discount_percent) {
+        discount = (orderTotal * coupon.discount_percent) / 100;
+      }
+      
+      return {
+        discount,
+        message: `Coupon applied: ৳${discount.toFixed(2)} discount`
+      };
+    } catch (error: any) {
+      console.error('Error applying coupon:', error);
+      return {
+        discount: 0,
+        message: "Invalid coupon code"
+      };
+    }
+  }
+};

@@ -10,22 +10,18 @@ import { toast } from "@/hooks/use-toast";
 import { User, Settings, Upload, Loader2 } from "lucide-react";
 import { profileService } from "@/lib/profileService";
 import { ProfileData } from "@/integrations/supabase/database.types";
-import { Textarea } from "@/components/ui/textarea";
 
-const CustomerProfile = () => {
-  const { user } = useAuth();
+const StaffProfile = () => {
+  const { user, userRole } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [profileData, setProfileData] = useState<Partial<ProfileData>>({
     full_name: "",
     phone: "",
-    address: "",
-    preferences: "",
     avatar_url: null
   });
 
-  // Fetch profile data
   useEffect(() => {
     if (user) {
       fetchProfileData();
@@ -41,14 +37,11 @@ const CustomerProfile = () => {
           ...profile
         });
       } else {
-        // Initialize with user data if available
         setProfileData({
           user_id: user.id,
           full_name: user.user_metadata?.name || "",
           avatar_url: user.user_metadata?.avatar_url || null,
-          phone: "",
-          address: "",
-          preferences: ""
+          phone: ""
         });
       }
     }
@@ -83,7 +76,6 @@ const CustomerProfile = () => {
     const file = e.target.files[0];
     setIsUploading(true);
     
-    // Check file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       toast({
         title: "File too large",
@@ -94,7 +86,6 @@ const CustomerProfile = () => {
       return;
     }
     
-    // Check file type
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Invalid file type",
@@ -112,7 +103,6 @@ const CustomerProfile = () => {
         avatar_url: avatarUrl
       }));
       
-      // Save the profile with the new avatar URL
       await profileService.upsertProfile({
         user_id: user.id,
         ...profileData,
@@ -135,8 +125,8 @@ const CustomerProfile = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Customer Profile</CardTitle>
-          <CardDescription>Manage your personal information and preferences</CardDescription>
+          <CardTitle>{userRole === "admin" ? "Admin" : "Staff"} Profile</CardTitle>
+          <CardDescription>Manage your account details</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4 mb-6">
@@ -172,8 +162,13 @@ const CustomerProfile = () => {
               )}
             </div>
             <div>
-              <h3 className="font-medium text-lg">{profileData.full_name || "Customer"}</h3>
+              <h3 className="font-medium text-lg">
+                {profileData.full_name || (userRole === "admin" ? "Admin" : "Staff")}
+              </h3>
               <p className="text-sm text-muted-foreground">{user?.email}</p>
+              <p className="text-xs text-muted-foreground capitalize font-medium">
+                {userRole} Role
+              </p>
             </div>
           </div>
 
@@ -199,44 +194,27 @@ const CustomerProfile = () => {
                   placeholder="+880"
                 />
               </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="address">Delivery Address</Label>
-                <Input 
-                  id="address" 
-                  name="address"
-                  value={profileData.address || ""} 
-                  onChange={handleChange} 
-                  placeholder="House, Road, Area, Dhaka"
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="preferences">Dietary Preferences</Label>
-                <Textarea 
-                  id="preferences" 
-                  name="preferences"
-                  value={profileData.preferences || ""} 
-                  onChange={handleChange} 
-                  placeholder="E.g., vegetarian, no onions, spicy food preferred"
-                />
-              </div>
             </div>
           ) : (
             <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-1 font-medium">Name:</div>
+                <div className="col-span-2">{profileData.full_name || "Not set"}</div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-1 font-medium">Email:</div>
+                <div className="col-span-2">{user?.email}</div>
+              </div>
+              
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1 font-medium">Phone:</div>
                 <div className="col-span-2">{profileData.phone || "Not provided"}</div>
               </div>
               
               <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-1 font-medium">Address:</div>
-                <div className="col-span-2">{profileData.address || "Not provided"}</div>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-1 font-medium">Preferences:</div>
-                <div className="col-span-2">{profileData.preferences || "None specified"}</div>
+                <div className="col-span-1 font-medium">Role:</div>
+                <div className="col-span-2 capitalize">{userRole}</div>
               </div>
             </div>
           )}
@@ -259,4 +237,4 @@ const CustomerProfile = () => {
   );
 };
 
-export default CustomerProfile;
+export default StaffProfile;

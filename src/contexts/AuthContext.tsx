@@ -16,7 +16,9 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, role?: UserRole) => Promise<void>;
   signOut: () => Promise<void>;
-  isAdmin: () => boolean; // Added isAdmin helper function
+  isAdmin: () => boolean;
+  isStaff: () => boolean;
+  updateUserProfile: (profile: { [key: string]: any }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -105,7 +107,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: `Welcome back, you've signed in as ${role}`,
       });
       
-      navigate('/dashboard');
+      // Redirect based on role
+      if (role === 'customer') {
+        navigate('/customer-dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       console.error('Error signing in:', error.message);
       toast({
@@ -157,9 +164,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Update user profile/metadata
+  const updateUserProfile = async (profile: { [key: string]: any }) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: profile
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile has been updated successfully',
+      });
+      
+      // Update the local user state with new metadata
+      if (user) {
+        setUser({
+          ...user,
+          user_metadata: {
+            ...user.user_metadata,
+            ...profile
+          }
+        });
+      }
+    } catch (error: any) {
+      console.error('Error updating profile:', error.message);
+      toast({
+        title: 'Profile update failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Add isAdmin helper function
   const isAdmin = () => {
     return userRole === 'admin';
+  };
+  
+  // Add isStaff helper function
+  const isStaff = () => {
+    return userRole === 'staff';
   };
 
   const value = {
@@ -170,7 +216,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signUp,
     signOut,
-    isAdmin, // Export the isAdmin function
+    isAdmin,
+    isStaff,
+    updateUserProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
