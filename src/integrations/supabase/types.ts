@@ -9,6 +9,77 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          discount_amount: number | null
+          discount_percent: number
+          expiry_date: string | null
+          id: string
+          is_active: boolean
+          minimum_order: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_amount?: number | null
+          discount_percent?: number
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          minimum_order?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_amount?: number | null
+          discount_percent?: number
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          minimum_order?: number | null
+        }
+        Relationships: []
+      }
+      delivery_assignments: {
+        Row: {
+          assigned_at: string
+          delivered_at: string | null
+          driver_id: string
+          driver_name: string
+          id: string
+          order_id: string
+          status: string
+        }
+        Insert: {
+          assigned_at?: string
+          delivered_at?: string | null
+          driver_id: string
+          driver_name: string
+          id?: string
+          order_id: string
+          status?: string
+        }
+        Update: {
+          assigned_at?: string
+          delivered_at?: string | null
+          driver_id?: string
+          driver_name?: string
+          id?: string
+          order_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_assignments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_items: {
         Row: {
           category: string
@@ -41,6 +112,41 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      order_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          order_id: string
+          sender_id: string
+          sender_role: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          order_id: string
+          sender_id: string
+          sender_role: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          order_id?: string
+          sender_id?: string
+          sender_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_messages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       orders: {
         Row: {
@@ -93,6 +199,75 @@ export type Database = {
           status?: string
           table_number?: string | null
           total?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          avatar_url: string | null
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+          preferences: string | null
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          full_name: string
+          id: string
+          phone?: string | null
+          preferences?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          preferences?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reservations: {
+        Row: {
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          guest_count: number
+          id: string
+          reservation_date: string
+          special_requests: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          guest_count: number
+          id?: string
+          reservation_date: string
+          special_requests?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          guest_count?: number
+          id?: string
+          reservation_date?: string
+          special_requests?: string | null
+          status?: string
         }
         Relationships: []
       }

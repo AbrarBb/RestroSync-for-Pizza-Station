@@ -2,13 +2,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ProfileData } from "@/integrations/supabase/database.types";
+import { safeQuery } from "./supabaseHelper";
 
 export const profileService = {
   // Fetch user profile
   getProfile: async (userId: string): Promise<ProfileData | null> => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
+      const { data, error } = await safeQuery('profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
@@ -28,8 +28,7 @@ export const profileService = {
   // Create or update user profile
   upsertProfile: async (profile: Partial<ProfileData>): Promise<boolean> => {
     try {
-      const { error } = await supabase
-        .from('profiles')
+      const { error } = await safeQuery('profiles')
         .upsert(profile, { onConflict: 'user_id' });
       
       if (error) {

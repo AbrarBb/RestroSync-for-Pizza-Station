@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { orderService } from "@/lib/orderService";
-import { supabase } from "@/integrations/supabase/client"; // Added the missing import
+import { supabase } from "@/integrations/supabase/client"; 
 import { useAuth } from "@/contexts/AuthContext";
 import { OrderMessage, DeliveryAssignment } from "@/integrations/supabase/database.types";
 import { Order, transformOrderItems } from "@/lib/supabase";

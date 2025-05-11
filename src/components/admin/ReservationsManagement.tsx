@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle, XCircle, MessageSquare } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { safeQuery } from "@/lib/supabaseHelper";
 import { 
   Dialog,
   DialogContent,
@@ -59,14 +59,13 @@ const ReservationsManagement = () => {
   const fetchReservations = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('reservations')
+      const { data, error } = await safeQuery('reservations')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      setReservations((data as unknown) as Reservation[]);
+      setReservations(data as Reservation[]);
     } catch (error: any) {
       console.error('Error fetching reservations:', error.message);
       toast({
@@ -81,8 +80,7 @@ const ReservationsManagement = () => {
   
   const handleUpdateStatus = async (id: string, status: Reservation['status']) => {
     try {
-      const { error } = await supabase
-        .from('reservations')
+      const { error } = await safeQuery('reservations')
         .update({ status })
         .eq('id', id);
       

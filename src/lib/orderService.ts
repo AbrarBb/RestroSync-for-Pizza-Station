@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Order, transformOrderItems } from "@/lib/supabase";
 import { OrderMessage, DeliveryAssignment, Coupon } from "@/integrations/supabase/database.types";
+import { safeQuery } from "./supabaseHelper";
 
 export const orderService = {
   // Get customer orders
@@ -38,15 +39,14 @@ export const orderService = {
   // Get order messages
   getOrderMessages: async (orderId: string): Promise<OrderMessage[]> => {
     try {
-      const { data, error } = await supabase
-        .from('order_messages')
+      const { data, error } = await safeQuery('order_messages')
         .select('*')
         .eq('order_id', orderId)
         .order('created_at', { ascending: true });
       
       if (error) throw error;
       
-      return (data as unknown) as OrderMessage[];
+      return data as OrderMessage[];
     } catch (error: any) {
       console.error('Error fetching order messages:', error);
       return [];
@@ -56,9 +56,8 @@ export const orderService = {
   // Send order message
   sendOrderMessage: async (message: Omit<OrderMessage, 'id' | 'created_at'>): Promise<boolean> => {
     try {
-      const { error } = await supabase
-        .from('order_messages')
-        .insert([message as any]);
+      const { error } = await safeQuery('order_messages')
+        .insert([message]);
       
       if (error) throw error;
       
@@ -77,13 +76,12 @@ export const orderService = {
   // Assign delivery driver
   assignDeliveryDriver: async (assignment: Omit<DeliveryAssignment, 'id' | 'assigned_at' | 'delivered_at'>): Promise<boolean> => {
     try {
-      const { error } = await supabase
-        .from('delivery_assignments')
+      const { error } = await safeQuery('delivery_assignments')
         .insert([{
           ...assignment,
           assigned_at: new Date().toISOString(),
           delivered_at: null
-        } as any]);
+        }]);
       
       if (error) throw error;
       
@@ -121,9 +119,8 @@ export const orderService = {
         updates.delivered_at = new Date().toISOString();
       }
       
-      const { error } = await supabase
-        .from('delivery_assignments')
-        .update(updates as any)
+      const { error } = await safeQuery('delivery_assignments')
+        .update(updates)
         .eq('order_id', orderId);
       
       if (error) throw error;
@@ -153,8 +150,7 @@ export const orderService = {
   // Get delivery assignment for an order
   getDeliveryAssignment: async (orderId: string): Promise<DeliveryAssignment | null> => {
     try {
-      const { data, error } = await supabase
-        .from('delivery_assignments')
+      const { data, error } = await safeQuery('delivery_assignments')
         .select('*')
         .eq('order_id', orderId)
         .single();
@@ -167,7 +163,7 @@ export const orderService = {
         throw error;
       }
       
-      return (data as unknown) as DeliveryAssignment;
+      return data as DeliveryAssignment;
     } catch (error: any) {
       console.error('Error fetching delivery assignment:', error);
       return null;
@@ -177,8 +173,7 @@ export const orderService = {
   // Apply coupon code
   applyCoupon: async (code: string, orderTotal: number): Promise<{ discount: number; message: string } | null> => {
     try {
-      const { data, error } = await supabase
-        .from('coupons')
+      const { data, error } = await safeQuery('coupons')
         .select('*')
         .eq('code', code)
         .eq('is_active', true)
@@ -186,7 +181,7 @@ export const orderService = {
       
       if (error) throw error;
       
-      const coupon = (data as unknown) as Coupon;
+      const coupon = data as Coupon;
       
       // Check if coupon is expired
       if (coupon.expiry_date && new Date(coupon.expiry_date) < new Date()) {
