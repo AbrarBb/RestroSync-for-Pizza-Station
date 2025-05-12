@@ -98,13 +98,25 @@ export const uploadFile = async (
       throw error;
     }
     
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from(bucketName)
-      .getPublicUrl(data?.path || filePath);
+    // Fix: Make sure we have path data before trying to get URL
+    const path = data?.path || filePath;
     
-    console.log(`File uploaded successfully, URL: ${urlData.publicUrl}`);
-    return urlData.publicUrl;
+    // Get public URL - improved handling
+    try {
+      const { data: urlData } = await supabase.storage
+        .from(bucketName)
+        .getPublicUrl(path);
+      
+      if (!urlData?.publicUrl) {
+        throw new Error('Failed to get public URL');
+      }
+      
+      console.log(`File uploaded successfully, URL: ${urlData.publicUrl}`);
+      return urlData.publicUrl;
+    } catch (urlError) {
+      console.error('Error getting public URL:', urlError);
+      throw new Error('Failed to get public URL for uploaded avatar');
+    }
   } catch (error: any) {
     console.error('File upload error:', error);
     toast({

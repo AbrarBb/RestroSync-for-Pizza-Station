@@ -66,7 +66,9 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
     setLoading(true);
     
     try {
+      // Add generated ID to ensure we have a valid ID even if database doesn't generate one
       const orderData = {
+        id: crypto.randomUUID(), // Ensure we have an ID
         customer_name: formData.name,
         customer_email: formData.email,
         customer_phone: formData.phone,
@@ -81,6 +83,7 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
         special_requests: formData.specialRequests,
       };
       
+      console.log('Submitting order data:', orderData);
       const success = await onSubmitOrder(orderData);
       
       if (!success) {
@@ -90,11 +93,11 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
           variant: "destructive"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error placing order:", error);
       toast({
         title: "Order failed",
-        description: "An unexpected error occurred. Please try again.",
+        description: error.message || "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
     } finally {

@@ -11,24 +11,24 @@ export const orderService = {
     try {
       console.log('Creating new order:', orderData);
       
-      // Use safeCast to ensure proper type handling
-      const { data, error } = await safeQuery('orders')
+      // Insert data and get result
+      const { data, error } = await supabase
+        .from('orders')
         .insert(orderData)
         .select('id')
         .single();
       
-      if (error) throw error;
-      
-      if (!data || typeof data !== 'object') {
-        throw new Error('Failed to create order: No data returned');
+      if (error) {
+        console.error('Error inserting order:', error);
+        throw error;
       }
       
-      // Use type assertion with optional chaining to safely access id
-      const orderId = (data as { id?: string })?.id;
-      if (!orderId) {
-        throw new Error('Failed to create order: No ID returned');
+      // Make sure data exists and has an id
+      if (!data || typeof data.id !== 'string') {
+        throw new Error('Failed to create order: No valid ID returned');
       }
       
+      const orderId = data.id;
       console.log('Order created successfully:', orderId);
       toast({
         title: "Order placed successfully",

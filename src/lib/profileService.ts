@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ProfileData } from "@/integrations/supabase/database.types";
@@ -96,7 +95,7 @@ export const profileService = {
     }
   },
   
-  // Upload profile avatar - fixed to use our uploadFile helper
+  // Upload profile avatar - improved to handle errors better
   uploadAvatar: async (userId: string, file: File): Promise<string | null> => {
     try {
       console.log('Uploading avatar for user:', userId, file);
@@ -117,13 +116,29 @@ export const profileService = {
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
       
-      // Use our common upload file function
-      const publicUrl = await uploadFile('avatars', filePath, file);
+      // Direct upload to supabase storage to bypass potential issues with helper
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
       
-      if (!publicUrl) {
+      if (error) {
+        console.error('Error uploading avatar to storage:', error);
+        throw error;
+      }
+      
+      // Get public URL directly
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(data?.path || filePath);
+      
+      if (!urlData?.publicUrl) {
         throw new Error('Failed to get public URL for uploaded avatar');
       }
       
+      const publicUrl = urlData.publicUrl;
       console.log('Avatar uploaded successfully, URL:', publicUrl);
       
       // Update user profile with new avatar URL
