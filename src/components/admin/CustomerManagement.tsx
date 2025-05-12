@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, MoreHorizontal, Plus, Search, UserPlus, Mail, UserCircle, Phone } from "lucide-react";
+import { Loader2, MoreHorizontal, Plus, Search, UserPlus, Mail, UserCircle, Phone, RefreshCw } from "lucide-react";
 import { ProfileData } from "@/integrations/supabase/database.types";
 
 const CustomerManagement = () => {

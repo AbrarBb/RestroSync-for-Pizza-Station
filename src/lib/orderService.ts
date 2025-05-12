@@ -17,13 +17,18 @@ export const orderService = {
       
       if (error) throw error;
       
-      console.log('Order created successfully:', data.id);
+      if (!data) {
+        throw new Error('Failed to create order: No data returned');
+      }
+      
+      const orderId = data.id as string;
+      console.log('Order created successfully:', orderId);
       toast({
         title: "Order placed successfully",
-        description: `Your order has been received. Order ID: ${data.id.substring(0, 8)}`,
+        description: `Your order has been received. Order ID: ${orderId.substring(0, 8)}`,
       });
       
-      return data.id;
+      return orderId;
     } catch (error: any) {
       console.error('Error creating order:', error);
       toast({

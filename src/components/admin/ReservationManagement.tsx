@@ -51,7 +51,13 @@ const ReservationManagement = () => {
         throw error;
       }
       
-      setReservations(data || []);
+      // Cast the data to ensure status is properly typed
+      const typedData = data?.map(reservation => ({
+        ...reservation,
+        status: reservation.status as Reservation['status']
+      })) || [];
+      
+      setReservations(typedData);
     } catch (error: any) {
       console.error('Error fetching reservations:', error);
       toast({
