@@ -40,7 +40,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const location = useLocation();
 
   // Helper function to determine user role
-  const determineUserRole = (email: string): UserRole => {
+  const determineUserRole = useCallback((email: string): UserRole => {
+    console.log('Determining role for email:', email);
     if (email.includes('admin')) {
       return 'admin';
     } else if (email.includes('staff')) {
@@ -48,10 +49,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       return 'customer';
     }
-  };
+  }, []);
 
+  // Initialize auth
   useEffect(() => {
-    // Set up auth state listener FIRST
+    console.log('Initializing auth state listener');
+    // Important: Set loading to true when starting to fetch session
+    setIsLoading(true);
+    
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
@@ -70,32 +76,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Got existing session:', session?.user?.id);
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      // Determine role based on email
-      if (session?.user) {
-        const email = session.user.email || '';
-        const role = determineUserRole(email);
-        setUserRole(role);
-        console.log('Set user role from existing session:', role);
-      } else {
-        setUserRole(null);
+    // Get initial session
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Got existing session:', session?.user?.id);
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Determine role based on email
+        if (session?.user) {
+          const email = session.user.email || '';
+          const role = determineUserRole(email);
+          setUserRole(role);
+          console.log('Set user role from existing session:', role);
+        } else {
+          setUserRole(null);
+        }
+      } catch (error) {
+        console.error('Error getting session:', error);
+      } finally {
+        // Always set loading to false when done
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
-    });
+    };
+
+    initializeAuth();
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [determineUserRole]);
 
   const signIn = async (email: string, password: string) => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       
@@ -121,11 +137,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error.message,
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, role: UserRole = 'customer') => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signUp({ 
         email, 
         password,
@@ -147,6 +166,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error.message,
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 

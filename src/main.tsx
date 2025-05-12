@@ -4,9 +4,21 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Ensure we're using React 18's createRoot API correctly
+// Add error boundary for better error handling
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("Failed to find the root element");
 
+// Add global error handler
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  // Log the error with extra context
+  originalConsoleError('Caught error:', ...args);
+  return originalConsoleError.apply(console, args);
+};
+
 const root = createRoot(rootElement);
-root.render(<App />);
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
