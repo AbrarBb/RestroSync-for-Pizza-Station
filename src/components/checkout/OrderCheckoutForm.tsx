@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -7,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Tag, Loader2 } from "lucide-react";
-import { orderService } from "@/lib/orderService";
+import { Loader2 } from "lucide-react";
 
 type OrderItem = {
   id: string;
@@ -32,45 +32,13 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
     address: user?.user_metadata?.address || "",
     paymentMethod: "bkash",
     specialRequests: "",
-    couponCode: ""
+    orderType: "delivery" // Default to delivery
   });
   const [loading, setLoading] = useState(false);
-  const [couponApplied, setCouponApplied] = useState(false);
-  const [discount, setDiscount] = useState(0);
-  const [couponMessage, setCouponMessage] = useState("");
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-  
-  const handleApplyCoupon = async () => {
-    if (!formData.couponCode.trim()) return;
-    
-    setLoading(true);
-    const result = await orderService.applyCoupon(formData.couponCode, subtotal);
-    setLoading(false);
-    
-    if (result) {
-      if (result.discount > 0) {
-        setCouponApplied(true);
-        setDiscount(result.discount);
-        toast({
-          title: "Coupon applied",
-          description: result.message
-        });
-      } else {
-        setCouponApplied(false);
-        setDiscount(0);
-        toast({
-          title: "Coupon not applied",
-          description: result.message,
-          variant: "destructive"
-        });
-      }
-      
-      setCouponMessage(result.message);
-    }
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,15 +55,17 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
     
     setLoading(true);
     
+    const orderType = formData.address ? formData.orderType : "dine_in";
+    
     const orderData = {
       customer_name: formData.name,
       customer_email: formData.email,
       customer_phone: formData.phone,
       customer_id: user?.id || null,
-      delivery_address: formData.address,
-      order_type: formData.address ? "delivery" : "pickup",
+      delivery_address: orderType === "delivery" ? formData.address : null,
+      order_type: orderType,
       items: items,
-      total: subtotal - discount,
+      total: subtotal,
       payment_method: formData.paymentMethod,
       payment_status: "pending",
       status: "pending",
@@ -162,23 +132,42 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
       
       <Card>
         <CardHeader>
-          <CardTitle>Delivery Information</CardTitle>
+          <CardTitle>Order Type & Delivery Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-2">
-            <Label htmlFor="address">Delivery Address</Label>
-            <Textarea
-              id="address"
-              name="address"
-              placeholder="Enter your full address for delivery"
-              value={formData.address}
-              onChange={handleChange}
-              className="min-h-[100px]"
-            />
-            <p className="text-sm text-muted-foreground">
-              Leave blank for pickup at our restaurant
-            </p>
+            <Label>Order Type</Label>
+            <RadioGroup
+              defaultValue="delivery"
+              value={formData.orderType}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, orderType: value }))}
+              className="flex gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="delivery" id="delivery" />
+                <Label htmlFor="delivery">Home Delivery</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="dine_in" id="dine_in" />
+                <Label htmlFor="dine_in">Dine In</Label>
+              </div>
+            </RadioGroup>
           </div>
+          
+          {formData.orderType === "delivery" && (
+            <div className="grid gap-2">
+              <Label htmlFor="address">Delivery Address</Label>
+              <Textarea
+                id="address"
+                name="address"
+                placeholder="Enter your full address for delivery"
+                value={formData.address}
+                onChange={handleChange}
+                className="min-h-[100px]"
+                required={formData.orderType === "delivery"}
+              />
+            </div>
+          )}
           
           <div className="grid gap-2">
             <Label htmlFor="specialRequests">Special Requests</Label>
@@ -275,55 +264,10 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
               <span>৳{subtotal.toFixed(2)}</span>
             </div>
             
-            {couponApplied && discount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>Discount</span>
-                <span>-৳{discount.toFixed(2)}</span>
-              </div>
-            )}
-            
             <div className="flex justify-between font-bold mt-2 pt-2 border-t">
               <span>Total</span>
-              <span>৳{(subtotal - discount).toFixed(2)}</span>
+              <span>৳{subtotal.toFixed(2)}</span>
             </div>
-          </div>
-          
-          <div className="grid gap-2 pt-4">
-            <Label htmlFor="couponCode" className="flex items-center gap-2">
-              <Tag className="h-4 w-4" /> Apply Coupon
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                id="couponCode"
-                name="couponCode"
-                placeholder="Enter coupon code"
-                value={formData.couponCode}
-                onChange={handleChange}
-                className="flex-1"
-                disabled={couponApplied}
-              />
-              <Button
-                type="button"
-                variant={couponApplied ? "destructive" : "secondary"}
-                onClick={() => {
-                  if (couponApplied) {
-                    setCouponApplied(false);
-                    setDiscount(0);
-                    setCouponMessage("");
-                  } else {
-                    handleApplyCoupon();
-                  }
-                }}
-                disabled={loading || (!couponApplied && !formData.couponCode)}
-              >
-                {couponApplied ? "Remove" : "Apply"}
-              </Button>
-            </div>
-            {couponMessage && (
-              <p className={`text-sm ${couponApplied ? "text-green-600" : "text-red-500"}`}>
-                {couponMessage}
-              </p>
-            )}
           </div>
         </CardContent>
         <CardFooter>
@@ -334,7 +278,7 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
                 Processing...
               </>
             ) : (
-              `Place Order - ৳${(subtotal - discount).toFixed(2)}`
+              `Place Order - ৳${subtotal.toFixed(2)}`
             )}
           </Button>
         </CardFooter>

@@ -33,6 +33,16 @@ export const profileService = {
   // Create or update user profile
   upsertProfile: async (profile: Partial<ProfileData>): Promise<boolean> => {
     try {
+      if (!profile.user_id) {
+        console.error('Error in upsertProfile: Missing user_id');
+        toast({
+          title: "Profile update failed",
+          description: "User ID is required to update profile",
+          variant: "destructive",
+        });
+        return false;
+      }
+
       // Check if profile already exists
       const { data: existingProfile, error: fetchError } = await safeQuery('profiles')
         .select('id')
@@ -80,58 +90,41 @@ export const profileService = {
     }
   },
   
-  // Upload profile avatar
+  // Upload profile avatar - fixed to handle Supabase storage properly
   uploadAvatar: async (userId: string, file: File): Promise<string | null> => {
     try {
-      // First, ensure the avatars bucket exists
-      await ensureStorageBucketExists('avatars');
-      
+      // Generate a unique file name to avoid collisions
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
       
-      const { error: uploadError } = await supabase.storage
+      // Upload the file to Supabase Storage
+      const { data, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
       
       if (uploadError) {
+        console.error('Storage upload error:', uploadError);
         throw uploadError;
       }
       
-      const { data } = supabase.storage
+      // Get the public URL of the uploaded file
+      const { data: publicURLData } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
       
-      return data.publicUrl;
+      return publicURLData.publicUrl;
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
       toast({
         title: "Avatar upload failed",
-        description: error.message,
+        description: error.message || "Failed to upload avatar. Please try again.",
         variant: "destructive",
       });
       return null;
     }
-  }
-};
-
-// Helper function to ensure the storage bucket exists
-const ensureStorageBucketExists = async (bucketName: string) => {
-  try {
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
-    
-    if (!bucketExists) {
-      // If bucket doesn't exist, create it
-      const { error } = await supabase.storage.createBucket(bucketName, {
-        public: true
-      });
-      
-      if (error) {
-        console.error(`Error creating bucket ${bucketName}:`, error);
-      }
-    }
-  } catch (error) {
-    console.error(`Error ensuring bucket ${bucketName} exists:`, error);
   }
 };

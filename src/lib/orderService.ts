@@ -1,7 +1,8 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Order, transformOrderItems } from "@/lib/supabase";
-import { OrderMessage, DeliveryAssignment, Coupon } from "@/integrations/supabase/database.types";
+import { OrderMessage, DeliveryAssignment } from "@/integrations/supabase/database.types";
 import { safeQuery, safeCast } from "./supabaseHelper";
 
 export const orderService = {
@@ -166,71 +167,6 @@ export const orderService = {
     } catch (error: any) {
       console.error('Error fetching delivery assignment:', error);
       return null;
-    }
-  },
-  
-  // Apply coupon code - fixed to properly handle the coupon application
-  applyCoupon: async (code: string, orderTotal: number): Promise<{ discount: number; message: string } | null> => {
-    try {
-      const { data, error } = await safeQuery('coupons')
-        .select('*')
-        .eq('code', code)
-        .eq('is_active', true)
-        .maybeSingle();
-      
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return {
-            discount: 0,
-            message: "Invalid coupon code"
-          };
-        }
-        throw error;
-      }
-      
-      const coupon = safeCast<Coupon>(data);
-      
-      if (!coupon) {
-        return {
-          discount: 0,
-          message: "Invalid coupon code"
-        };
-      }
-      
-      // Check if coupon is expired
-      if (coupon.expiry_date && new Date(coupon.expiry_date) < new Date()) {
-        return {
-          discount: 0,
-          message: "This coupon has expired"
-        };
-      }
-      
-      // Check minimum order amount
-      if (coupon.minimum_order && orderTotal < coupon.minimum_order) {
-        return {
-          discount: 0,
-          message: `Minimum order amount is ৳${coupon.minimum_order}`
-        };
-      }
-      
-      // Calculate discount
-      let discount = 0;
-      if (coupon.discount_amount) {
-        discount = coupon.discount_amount;
-      } else if (coupon.discount_percent) {
-        discount = (orderTotal * coupon.discount_percent) / 100;
-      }
-      
-      return {
-        discount,
-        message: `Coupon applied: ৳${discount.toFixed(2)} discount`
-      };
-    } catch (error: any) {
-      console.error('Error applying coupon:', error);
-      return {
-        discount: 0,
-        message: "Invalid coupon code"
-      };
     }
   }
 };
