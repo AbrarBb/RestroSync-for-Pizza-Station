@@ -10,6 +10,8 @@ export const orderService = {
   createOrder: async (orderData: any): Promise<string | null> => {
     try {
       console.log('Creating new order:', orderData);
+      
+      // Use safeCast to ensure proper type handling
       const { data, error } = await safeQuery('orders')
         .insert(orderData)
         .select('id')
@@ -17,11 +19,16 @@ export const orderService = {
       
       if (error) throw error;
       
-      if (!data) {
+      if (!data || typeof data !== 'object') {
         throw new Error('Failed to create order: No data returned');
       }
       
-      const orderId = data.id as string;
+      // Use type assertion with optional chaining to safely access id
+      const orderId = (data as { id?: string })?.id;
+      if (!orderId) {
+        throw new Error('Failed to create order: No ID returned');
+      }
+      
       console.log('Order created successfully:', orderId);
       toast({
         title: "Order placed successfully",
