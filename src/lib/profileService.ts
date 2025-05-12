@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ProfileData } from "@/integrations/supabase/database.types";
 import { safeQuery, safeCast } from "./supabaseHelper";
+import { uploadFile } from "./supabaseStorageHelper";
 
 export const profileService = {
   // Fetch user profile
   getProfile: async (userId: string): Promise<ProfileData | null> => {
     try {
+      console.log('Fetching profile for user:', userId);
       const { data, error } = await safeQuery('profiles')
         .select('*')
         .eq('user_id', userId)
@@ -23,6 +25,7 @@ export const profileService = {
         return null;
       }
       
+      console.log('Profile fetched successfully:', data);
       return safeCast<ProfileData>(data);
     } catch (error) {
       console.error('Error in getProfile:', error);
@@ -33,6 +36,7 @@ export const profileService = {
   // Create or update user profile
   upsertProfile: async (profile: Partial<ProfileData>): Promise<boolean> => {
     try {
+      console.log('Upserting profile:', profile);
       if (!profile.user_id) {
         console.error('Error in upsertProfile: Missing user_id');
         toast({
@@ -56,6 +60,7 @@ export const profileService = {
       
       if (existingProfile) {
         // Update existing profile
+        console.log('Updating existing profile');
         const { error } = await safeQuery('profiles')
           .update(profile)
           .eq('user_id', profile.user_id);
@@ -63,6 +68,7 @@ export const profileService = {
         if (error) throw error;
       } else {
         // Create new profile with generated UUID
+        console.log('Creating new profile');
         const newProfile = {
           id: crypto.randomUUID(),
           ...profile
@@ -90,33 +96,24 @@ export const profileService = {
     }
   },
   
-  // Upload profile avatar - fixed to handle Supabase storage properly
+  // Upload profile avatar - fixed to use our uploadFile helper
   uploadAvatar: async (userId: string, file: File): Promise<string | null> => {
     try {
+      console.log('Uploading avatar for user:', userId);
       // Generate a unique file name to avoid collisions
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
       
-      // Upload the file to Supabase Storage
-      const { data, error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      // Use our common upload file function
+      const publicUrl = await uploadFile('avatars', filePath, file);
       
-      if (uploadError) {
-        console.error('Storage upload error:', uploadError);
-        throw uploadError;
+      if (!publicUrl) {
+        throw new Error('Failed to get public URL for uploaded avatar');
       }
       
-      // Get the public URL of the uploaded file
-      const { data: publicURLData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-      
-      return publicURLData.publicUrl;
+      console.log('Avatar uploaded successfully, URL:', publicUrl);
+      return publicUrl;
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
       toast({

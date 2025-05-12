@@ -20,7 +20,8 @@ import Customers from './pages/Customers';
 import DeliveryManagement from './pages/DeliveryManagement';
 import { setupStorage } from './lib/supabaseStorageHelper';
 
-// Initialize Supabase storage
+// Initialize Supabase storage with improved logging
+console.log('Initializing application...');
 setupStorage();
 
 // Create React Query client

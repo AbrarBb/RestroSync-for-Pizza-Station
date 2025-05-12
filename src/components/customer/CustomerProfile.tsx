@@ -35,12 +35,15 @@ const CustomerProfile = () => {
   const fetchProfileData = async () => {
     setIsLoading(true);
     if (user) {
+      console.log('Fetching customer profile for user:', user.id);
       const profile = await profileService.getProfile(user.id);
       if (profile) {
+        console.log('Customer profile found:', profile);
         setProfileData({
           ...profile
         });
       } else {
+        console.log('No customer profile found, initializing with user data');
         // Initialize with user data if available
         setProfileData({
           user_id: user.id,
@@ -71,6 +74,7 @@ const CustomerProfile = () => {
       ...profileData
     };
     
+    console.log('Saving customer profile:', dataToSave);
     const success = await profileService.upsertProfile(dataToSave);
     if (success) {
       setIsEditing(false);
@@ -82,6 +86,8 @@ const CustomerProfile = () => {
     
     const file = e.target.files[0];
     setIsUploading(true);
+    
+    console.log('Uploading customer avatar:', file.name);
     
     // Check file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
@@ -105,22 +111,32 @@ const CustomerProfile = () => {
       return;
     }
     
-    const avatarUrl = await profileService.uploadAvatar(user.id, file);
-    if (avatarUrl) {
-      setProfileData(prev => ({
-        ...prev,
-        avatar_url: avatarUrl
-      }));
-      
-      // Save the profile with the new avatar URL
-      await profileService.upsertProfile({
-        user_id: user.id,
-        ...profileData,
-        avatar_url: avatarUrl
-      });
+    try {
+      const avatarUrl = await profileService.uploadAvatar(user.id, file);
+      if (avatarUrl) {
+        console.log('Customer avatar uploaded successfully:', avatarUrl);
+        setProfileData(prev => ({
+          ...prev,
+          avatar_url: avatarUrl
+        }));
+        
+        // Save the profile with the new avatar URL
+        await profileService.upsertProfile({
+          user_id: user.id,
+          ...profileData,
+          avatar_url: avatarUrl
+        });
+        
+        toast({
+          title: "Avatar updated",
+          description: "Your profile picture has been updated successfully."
+        });
+      }
+    } catch (error) {
+      console.error('Customer avatar upload failed:', error);
+    } finally {
+      setIsUploading(false);
     }
-    
-    setIsUploading(false);
   };
 
   if (isLoading) {

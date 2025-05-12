@@ -70,11 +70,13 @@ export const uploadFile = async (
   file: File
 ): Promise<string | null> => {
   try {
+    console.log(`Uploading file to ${bucketName}/${filePath}`);
+    
     const { data, error } = await supabase.storage
       .from(bucketName)
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: false
+        upsert: true // Changed to true to overwrite existing files
       });
     
     if (error) {
@@ -87,6 +89,7 @@ export const uploadFile = async (
       .from(bucketName)
       .getPublicUrl(filePath);
     
+    console.log(`File uploaded successfully, URL: ${urlData.publicUrl}`);
     return urlData.publicUrl;
   } catch (error: any) {
     console.error('File upload error:', error);
@@ -97,6 +100,17 @@ export const uploadFile = async (
     });
     return null;
   }
+};
+
+/**
+ * Get a file from a storage bucket
+ */
+export const getFileUrl = (bucketName: string, filePath: string): string => {
+  const { data } = supabase.storage
+    .from(bucketName)
+    .getPublicUrl(filePath);
+  
+  return data.publicUrl;
 };
 
 // Initialize storage buckets on app load

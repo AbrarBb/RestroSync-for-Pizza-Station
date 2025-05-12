@@ -31,12 +31,15 @@ const StaffProfile = () => {
   const fetchProfileData = async () => {
     setIsLoading(true);
     if (user) {
+      console.log('Fetching profile data for user:', user.id);
       const profile = await profileService.getProfile(user.id);
       if (profile) {
+        console.log('Profile found:', profile);
         setProfileData({
           ...profile
         });
       } else {
+        console.log('No profile found, initializing with user data');
         setProfileData({
           user_id: user.id,
           full_name: user.user_metadata?.name || "",
@@ -64,6 +67,7 @@ const StaffProfile = () => {
       ...profileData
     };
     
+    console.log('Saving profile data:', dataToSave);
     const success = await profileService.upsertProfile(dataToSave);
     if (success) {
       setIsEditing(false);
@@ -75,6 +79,8 @@ const StaffProfile = () => {
     
     const file = e.target.files[0];
     setIsUploading(true);
+    
+    console.log('Uploading avatar file:', file.name);
     
     if (file.size > 2 * 1024 * 1024) {
       toast({
@@ -96,21 +102,32 @@ const StaffProfile = () => {
       return;
     }
     
-    const avatarUrl = await profileService.uploadAvatar(user.id, file);
-    if (avatarUrl) {
-      setProfileData(prev => ({
-        ...prev,
-        avatar_url: avatarUrl
-      }));
-      
-      await profileService.upsertProfile({
-        user_id: user.id,
-        ...profileData,
-        avatar_url: avatarUrl
-      });
+    try {
+      const avatarUrl = await profileService.uploadAvatar(user.id, file);
+      if (avatarUrl) {
+        console.log('Avatar uploaded successfully:', avatarUrl);
+        setProfileData(prev => ({
+          ...prev,
+          avatar_url: avatarUrl
+        }));
+        
+        // Save the profile with the new avatar URL
+        await profileService.upsertProfile({
+          user_id: user.id,
+          ...profileData,
+          avatar_url: avatarUrl
+        });
+        
+        toast({
+          title: "Avatar updated",
+          description: "Your profile picture has been updated successfully."
+        });
+      }
+    } catch (error) {
+      console.error('Avatar upload failed:', error);
+    } finally {
+      setIsUploading(false);
     }
-    
-    setIsUploading(false);
   };
 
   if (isLoading) {
