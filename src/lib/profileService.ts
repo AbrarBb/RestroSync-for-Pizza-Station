@@ -99,7 +99,19 @@ export const profileService = {
   // Upload profile avatar - fixed to use our uploadFile helper
   uploadAvatar: async (userId: string, file: File): Promise<string | null> => {
     try {
-      console.log('Uploading avatar for user:', userId);
+      console.log('Uploading avatar for user:', userId, file);
+      
+      // Validate file
+      if (!file || file.size === 0) {
+        throw new Error("Please select a valid image file");
+      }
+      
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        throw new Error("Please select a valid image file (JPEG, PNG, GIF, or WEBP)");
+      }
+      
       // Generate a unique file name to avoid collisions
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
@@ -113,6 +125,13 @@ export const profileService = {
       }
       
       console.log('Avatar uploaded successfully, URL:', publicUrl);
+      
+      // Update user profile with new avatar URL
+      await profileService.upsertProfile({
+        user_id: userId,
+        avatar_url: publicUrl
+      });
+      
       return publicUrl;
     } catch (error: any) {
       console.error('Error uploading avatar:', error);

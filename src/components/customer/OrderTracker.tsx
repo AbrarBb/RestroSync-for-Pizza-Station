@@ -10,7 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { OrderMessage, DeliveryAssignment } from "@/integrations/supabase/database.types";
 import { Order, transformOrderItems } from "@/lib/supabase";
-import { Loader2, MessageSquare, Send, Package, User, MapPin, CalendarClock } from "lucide-react";
+import { Loader2, MessageSquare, Send, Package, User, MapPin, CalendarClock, RefreshCw } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface OrderTrackerProps {
   orderId: string;
@@ -20,57 +21,59 @@ const OrderTracker = ({ orderId }: OrderTrackerProps) => {
   const { user, userRole } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [messages, setMessages] = useState<OrderMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [deliveryStatus, setDeliveryStatus] = useState<DeliveryAssignment | null>(null);
   
   // Fetch order details, messages and delivery status
-  useEffect(() => {
-    const fetchOrderData = async () => {
-      if (!orderId) return;
-      
-      try {
-        setLoading(true);
-        
-        // Fetch order
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('id', orderId)
-          .single();
-        
-        if (error) throw error;
-        
-        const orderData = {
-          ...data,
-          items: transformOrderItems(data.items),
-          status: data.status as Order['status'],
-          order_type: data.order_type as Order['order_type'],
-          payment_status: data.payment_status as Order['payment_status']
-        };
-        
-        setOrder(orderData);
-        
-        // Fetch messages
-        const orderMessages = await orderService.getOrderMessages(orderId);
-        setMessages(orderMessages);
-        
-        // Fetch delivery status if applicable
-        if (orderData.order_type === 'delivery') {
-          const assignment = await orderService.getDeliveryAssignment(orderId);
-          setDeliveryStatus(assignment);
-        }
-      } catch (error) {
-        console.error("Error fetching order data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchOrderData = async () => {
+    if (!orderId) return;
     
+    try {
+      setLoading(true);
+      
+      // Fetch order
+      const orderData = await orderService.getOrderById(orderId);
+      
+      if (!orderData) {
+        toast({
+          title: "Order not found",
+          description: "Unable to retrieve order details",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+      
+      setOrder(orderData);
+      
+      // Fetch messages
+      const orderMessages = await orderService.getOrderMessages(orderId);
+      setMessages(orderMessages);
+      
+      // Fetch delivery status if applicable
+      if (orderData.order_type === 'delivery') {
+        const assignment = await orderService.getDeliveryAssignment(orderId);
+        setDeliveryStatus(assignment);
+      }
+    } catch (error) {
+      console.error("Error fetching order data:", error);
+      toast({
+        title: "Error loading order",
+        description: "Failed to load order details. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     fetchOrderData();
     
     // Set up real-time subscription for messages
-    const channel = supabase
+    const messagesChannel = supabase
       .channel('order_messages_changes')
       .on('postgres_changes', {
         event: 'INSERT',
@@ -78,7 +81,28 @@ const OrderTracker = ({ orderId }: OrderTrackerProps) => {
         table: 'order_messages',
         filter: `order_id=eq.${orderId}`
       }, payload => {
+        console.log('New message received:', payload.new);
         setMessages(prev => [...prev, payload.new as OrderMessage]);
+      })
+      .subscribe();
+    
+    // Set up real-time subscription for order status changes
+    const orderChannel = supabase
+      .channel('order_status_changes')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',
+        filter: `id=eq.${orderId}`
+      }, payload => {
+        console.log('Order status updated:', payload.new);
+        setOrder(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: payload.new.status as Order['status']
+          };
+        });
       })
       .subscribe();
     
@@ -91,12 +115,14 @@ const OrderTracker = ({ orderId }: OrderTrackerProps) => {
         table: 'delivery_assignments',
         filter: `order_id=eq.${orderId}`
       }, payload => {
+        console.log('Delivery status updated:', payload.new);
         setDeliveryStatus(payload.new as DeliveryAssignment);
       })
       .subscribe();
     
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(orderChannel);
       supabase.removeChannel(deliveryChannel);
     };
   }, [orderId]);
@@ -117,6 +143,12 @@ const OrderTracker = ({ orderId }: OrderTrackerProps) => {
     }
   };
   
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchOrderData();
+    setRefreshing(false);
+  };
+  
   if (loading) {
     return (
       <div className="flex justify-center items-center py-10">
@@ -129,6 +161,13 @@ const OrderTracker = ({ orderId }: OrderTrackerProps) => {
     return (
       <div className="text-center py-10">
         <p>Order not found</p>
+        <Button 
+          variant="outline" 
+          className="mt-4" 
+          onClick={handleRefresh}
+        >
+          Try Again
+        </Button>
       </div>
     );
   }
@@ -162,9 +201,19 @@ const OrderTracker = ({ orderId }: OrderTrackerProps) => {
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Order #{order.id.substring(0, 8)}</CardTitle>
-            <Badge className={`${getStatusColor(order.status)} capitalize`}>
-              {order.status}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge className={`${getStatusColor(order.status)} capitalize`}>
+                {order.status}
+              </Badge>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -6,6 +6,35 @@ import { OrderMessage, DeliveryAssignment } from "@/integrations/supabase/databa
 import { safeQuery, safeCast } from "./supabaseHelper";
 
 export const orderService = {
+  // Create a new order
+  createOrder: async (orderData: any): Promise<string | null> => {
+    try {
+      console.log('Creating new order:', orderData);
+      const { data, error } = await safeQuery('orders')
+        .insert(orderData)
+        .select('id')
+        .single();
+      
+      if (error) throw error;
+      
+      console.log('Order created successfully:', data.id);
+      toast({
+        title: "Order placed successfully",
+        description: `Your order has been received. Order ID: ${data.id.substring(0, 8)}`,
+      });
+      
+      return data.id;
+    } catch (error: any) {
+      console.error('Error creating order:', error);
+      toast({
+        title: "Failed to place order",
+        description: error.message,
+        variant: "destructive",
+      });
+      return null;
+    }
+  },
+  
   // Get customer orders
   getCustomerOrders: async (customerId: string): Promise<Order[]> => {
     try {
@@ -36,6 +65,58 @@ export const orderService = {
     }
   },
   
+  // Get order by ID
+  getOrderById: async (orderId: string): Promise<Order | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+      
+      if (error) throw error;
+      
+      // Transform to properly typed order
+      return {
+        ...data,
+        items: transformOrderItems(data.items),
+        status: data.status as Order['status'],
+        order_type: data.order_type as Order['order_type'],
+        payment_status: data.payment_status as Order['payment_status']
+      };
+    } catch (error: any) {
+      console.error('Error fetching order details:', error);
+      return null;
+    }
+  },
+  
+  // Update order status
+  updateOrderStatus: async (orderId: string, status: Order['status']): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Order status updated",
+        description: `Order status has been updated to ${status}`
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error updating order status:', error);
+      toast({
+        title: "Failed to update status",
+        description: error.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  },
+  
   // Get order messages
   getOrderMessages: async (orderId: string): Promise<OrderMessage[]> => {
     try {
@@ -56,6 +137,7 @@ export const orderService = {
   // Send order message
   sendOrderMessage: async (message: Omit<OrderMessage, 'id' | 'created_at'>): Promise<boolean> => {
     try {
+      console.log('Sending order message:', message);
       const { error } = await safeQuery('order_messages')
         .insert([message as any]);
       
@@ -167,6 +249,34 @@ export const orderService = {
     } catch (error: any) {
       console.error('Error fetching delivery assignment:', error);
       return null;
+    }
+  },
+
+  // Get all orders for admin/staff
+  getAllOrders: async (): Promise<Order[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      return data?.map(order => ({
+        ...order,
+        items: transformOrderItems(order.items),
+        status: order.status as Order['status'],
+        order_type: order.order_type as Order['order_type'],
+        payment_status: order.payment_status as Order['payment_status']
+      })) || [];
+    } catch (error: any) {
+      console.error('Error fetching all orders:', error);
+      toast({
+        title: "Failed to load orders",
+        description: error.message,
+        variant: "destructive",
+      });
+      return [];
     }
   }
 };

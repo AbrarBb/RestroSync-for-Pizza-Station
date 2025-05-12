@@ -70,13 +70,27 @@ export const uploadFile = async (
   file: File
 ): Promise<string | null> => {
   try {
-    console.log(`Uploading file to ${bucketName}/${filePath}`);
+    console.log(`Uploading file to ${bucketName}/${filePath}`, file);
+    
+    // Ensure file is valid
+    if (!file || file.size === 0) {
+      throw new Error("Invalid file. Please select a valid file to upload.");
+    }
+    
+    // Check if bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(b => b.name === bucketName);
+    
+    if (!bucketExists) {
+      console.log(`Bucket ${bucketName} doesn't exist, creating it...`);
+      await createBucket(bucketName, true);
+    }
     
     const { data, error } = await supabase.storage
       .from(bucketName)
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: true // Changed to true to overwrite existing files
+        upsert: true // Set to true to overwrite existing files
       });
     
     if (error) {
@@ -87,7 +101,7 @@ export const uploadFile = async (
     // Get public URL
     const { data: urlData } = supabase.storage
       .from(bucketName)
-      .getPublicUrl(filePath);
+      .getPublicUrl(data?.path || filePath);
     
     console.log(`File uploaded successfully, URL: ${urlData.publicUrl}`);
     return urlData.publicUrl;
@@ -121,6 +135,12 @@ export const setupStorage = () => {
         console.log('Supabase storage successfully initialized');
       } else {
         console.warn('Supabase storage initialization had issues');
+        // Try again after a short delay
+        setTimeout(() => {
+          initializeStorage()
+            .then(retry => console.log('Retry initialization result:', retry))
+            .catch(err => console.error('Retry initialization failed:', err));
+        }, 2000);
       }
     })
     .catch(error => {

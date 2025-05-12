@@ -53,34 +53,52 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
       return;
     }
     
-    setLoading(true);
-    
-    const orderType = formData.address ? formData.orderType : "dine_in";
-    
-    const orderData = {
-      customer_name: formData.name,
-      customer_email: formData.email,
-      customer_phone: formData.phone,
-      customer_id: user?.id || null,
-      delivery_address: orderType === "delivery" ? formData.address : null,
-      order_type: orderType,
-      items: items,
-      total: subtotal,
-      payment_method: formData.paymentMethod,
-      payment_status: "pending",
-      status: "pending",
-      special_requests: formData.specialRequests,
-    };
-    
-    const success = await onSubmitOrder(orderData);
-    setLoading(false);
-    
-    if (!success) {
+    // Validate for delivery type
+    if (formData.orderType === "delivery" && !formData.address) {
       toast({
-        title: "Order failed",
-        description: "There was a problem placing your order. Please try again.",
+        title: "Missing delivery address",
+        description: "Please provide an address for delivery",
         variant: "destructive"
       });
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const orderData = {
+        customer_name: formData.name,
+        customer_email: formData.email,
+        customer_phone: formData.phone,
+        customer_id: user?.id || null,
+        delivery_address: formData.orderType === "delivery" ? formData.address : null,
+        order_type: formData.orderType,
+        items: items,
+        total: subtotal,
+        payment_method: formData.paymentMethod,
+        payment_status: "pending",
+        status: "pending",
+        special_requests: formData.specialRequests,
+      };
+      
+      const success = await onSubmitOrder(orderData);
+      
+      if (!success) {
+        toast({
+          title: "Order failed",
+          description: "There was a problem placing your order. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error placing order:", error);
+      toast({
+        title: "Order failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 

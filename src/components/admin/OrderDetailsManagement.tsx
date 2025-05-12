@@ -14,7 +14,7 @@ import { OrderMessage, DeliveryAssignment } from "@/integrations/supabase/databa
 import { Order, transformOrderItems } from "@/lib/supabase";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, MessageSquare, Send, Package, User, MapPin, CalendarClock, Truck } from "lucide-react";
+import { Loader2, MessageSquare, Send, Package, User, MapPin, CalendarClock, Truck, RefreshCw } from "lucide-react";
 
 interface OrderDetailsManagementProps {
   orderId: string;
@@ -38,6 +38,7 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
   const { user, userRole } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [messages, setMessages] = useState<OrderMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [deliveryStatus, setDeliveryStatus] = useState<DeliveryAssignment | null>(null);
@@ -45,61 +46,62 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
   const [selectedDriver, setSelectedDriver] = useState<string>("");
   
   // Fetch order details, messages and delivery status
-  useEffect(() => {
-    const fetchOrderData = async () => {
-      if (!orderId) return;
-      
-      try {
-        setLoading(true);
-        
-        // Fetch order
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('id', orderId)
-          .single();
-        
-        if (error) throw error;
-        
-        const orderData = {
-          ...data,
-          items: transformOrderItems(data.items),
-          status: data.status as Order['status'],
-          order_type: data.order_type as Order['order_type'],
-          payment_status: data.payment_status as Order['payment_status']
-        };
-        
-        setOrder(orderData);
-        
-        // Fetch messages
-        const orderMessages = await orderService.getOrderMessages(orderId);
-        setMessages(orderMessages);
-        
-        // Fetch delivery status if applicable
-        if (orderData.order_type === 'delivery') {
-          const assignment = await orderService.getDeliveryAssignment(orderId);
-          setDeliveryStatus(assignment);
-          
-          // Fetch drivers (in real app, would fetch from database)
-          // Mock drivers for now
-          setDrivers([
-            { id: 'd1', name: 'Rahim Ahmed' },
-            { id: 'd2', name: 'Kamal Khan' },
-            { id: 'd3', name: 'Jamal Hossain' },
-            { id: 'd4', name: 'Saidul Islam' }
-          ]);
-        }
-      } catch (error) {
-        console.error("Error fetching order data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchOrderData = async () => {
+    if (!orderId) return;
     
+    try {
+      setLoading(true);
+      
+      // Fetch order
+      const orderData = await orderService.getOrderById(orderId);
+      
+      if (!orderData) {
+        toast({
+          title: "Order not found",
+          description: "Unable to retrieve order details",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+      
+      setOrder(orderData);
+      
+      // Fetch messages
+      const orderMessages = await orderService.getOrderMessages(orderId);
+      setMessages(orderMessages);
+      
+      // Fetch delivery status if applicable
+      if (orderData.order_type === 'delivery') {
+        const assignment = await orderService.getDeliveryAssignment(orderId);
+        setDeliveryStatus(assignment);
+        
+        // Fetch drivers (in real app, would fetch from database)
+        // Mock drivers for now
+        setDrivers([
+          { id: 'd1', name: 'Rahim Ahmed' },
+          { id: 'd2', name: 'Kamal Khan' },
+          { id: 'd3', name: 'Jamal Hossain' },
+          { id: 'd4', name: 'Saidul Islam' }
+        ]);
+      }
+    } catch (error) {
+      console.error("Error fetching order data:", error);
+      toast({
+        title: "Error loading order",
+        description: "Failed to load order details. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     fetchOrderData();
     
     // Set up real-time subscription for messages
-    const channel = supabase
+    const messagesChannel = supabase
       .channel('order_messages_changes')
       .on('postgres_changes', {
         event: 'INSERT',
@@ -107,7 +109,28 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
         table: 'order_messages',
         filter: `order_id=eq.${orderId}`
       }, payload => {
+        console.log('New message received:', payload.new);
         setMessages(prev => [...prev, payload.new as OrderMessage]);
+      })
+      .subscribe();
+    
+    // Set up real-time subscription for order status changes
+    const orderChannel = supabase
+      .channel('order_status_changes')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',
+        filter: `id=eq.${orderId}`
+      }, payload => {
+        console.log('Order status updated:', payload.new);
+        setOrder(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: payload.new.status as Order['status']
+          };
+        });
       })
       .subscribe();
     
@@ -120,12 +143,14 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
         table: 'delivery_assignments',
         filter: `order_id=eq.${orderId}`
       }, payload => {
+        console.log('Delivery status updated:', payload.new);
         setDeliveryStatus(payload.new as DeliveryAssignment);
       })
       .subscribe();
     
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(orderChannel);
       supabase.removeChannel(deliveryChannel);
     };
   }, [orderId]);
@@ -150,19 +175,12 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
     if (!order) return;
     
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status })
-        .eq('id', order.id);
+      // Use orderService to update status
+      const success = await orderService.updateOrderStatus(order.id, status as Order['status']);
       
-      if (error) throw error;
-      
-      setOrder(prev => prev ? { ...prev, status: status as Order['status'] } : null);
-      
-      toast({
-        title: "Order status updated",
-        description: `Order status has been updated to ${status}`
-      });
+      if (success) {
+        setOrder(prev => prev ? { ...prev, status: status as Order['status'] } : null);
+      }
     } catch (error: any) {
       console.error('Error updating order status:', error);
       toast({
@@ -188,11 +206,15 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
     
     const success = await orderService.assignDeliveryDriver(assignment);
     if (success) {
-      toast({
-        title: "Driver assigned",
-        description: `${driver.name} has been assigned to this delivery`
-      });
+      // Refresh to get the updated delivery assignment
+      fetchOrderData();
     }
+  };
+  
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchOrderData();
+    setRefreshing(false);
   };
   
   if (loading) {
@@ -207,6 +229,13 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
     return (
       <div className="text-center py-10">
         <p>Order not found</p>
+        <Button 
+          variant="outline" 
+          className="mt-4" 
+          onClick={handleRefresh}
+        >
+          Try Again
+        </Button>
       </div>
     );
   }
@@ -245,9 +274,19 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
                 {formatDate(order.created_at)}
               </CardDescription>
             </div>
-            <Badge className={`${getStatusColor(order.status)} capitalize`}>
-              {order.status}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge className={`${getStatusColor(order.status)} capitalize`}>
+                {order.status}
+              </Badge>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -356,6 +395,33 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
                       <p>
                         <span className="font-medium">Delivered at:</span> {formatDate(deliveryStatus.delivered_at)}
                       </p>
+                    )}
+                    
+                    {/* Update delivery status buttons */}
+                    {deliveryStatus.status !== 'delivered' && (
+                      <div className="mt-2">
+                        <h4 className="font-medium mb-2">Update Delivery Status:</h4>
+                        <div className="flex gap-2">
+                          {deliveryStatus.status === 'assigned' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => orderService.updateDeliveryStatus(orderId, 'picked_up')}
+                            >
+                              Mark as Picked Up
+                            </Button>
+                          )}
+                          
+                          {(deliveryStatus.status === 'assigned' || deliveryStatus.status === 'picked_up') && (
+                            <Button
+                              size="sm"
+                              onClick={() => orderService.updateDeliveryStatus(orderId, 'delivered')}
+                            >
+                              Mark as Delivered
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ) : (
