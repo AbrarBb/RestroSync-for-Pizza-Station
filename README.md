@@ -106,10 +106,6 @@ UI/UX Details
 *   Optimized for tablets and smartphones
     
 
-Developer Scripts
------------------
-
-CommandDescriptionbun run devRun development serverbun run buildCreate production buildbun run previewPreview production build
 
 Deployment (Production)
 -----------------------
