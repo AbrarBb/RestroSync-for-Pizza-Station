@@ -39,46 +39,40 @@ RestroSync-for-Pizza-Station/
 └── README.md               # Project documentation
 ```
 
-Supabase Schema Overview
-------------------------
+## Supabase Schema Overview
 
-### users Table
+The backend uses Supabase, a backend-as-a-service platform built on PostgreSQL. Below is an overview of the primary database tables:
 
-*   id: UUID (Primary Key)
-    
-*   email: TEXT
-    
-*   role: TEXT (admin, staff)
-    
+### `users` Table
 
-### menu\_items Table
+| Column Name | Data Type | Description                  |
+|-------------|-----------|------------------------------|
+| id          | UUID      | Primary key, unique user ID  |
+| email       | TEXT      | User's email address         |
+| role        | TEXT      | User role (`admin`, `staff`) |
 
-*   id: UUID
-    
-*   name: TEXT
-    
-*   description: TEXT
-    
-*   price: NUMERIC
-    
-*   available: BOOLEAN
-    
-*   image\_url: TEXT
-    
+### `menu_items` Table
 
-### orders Table
+| Column Name | Data Type | Description                         |
+|-------------|-----------|-------------------------------------|
+| id          | UUID      | Primary key, unique item ID         |
+| name        | TEXT      | Name of the menu item               |
+| description | TEXT      | Description of the item             |
+| price       | NUMERIC   | Price of the item                   |
+| available   | BOOLEAN   | Whether the item is available       |
+| image_url   | TEXT      | URL to an image of the menu item    |
 
-*   id: UUID
-    
-*   user\_id: UUID (FK)
-    
-*   items: JSONB
-    
-*   status: ENUM(pending, preparing, ready, delivered)
-    
-*   created\_at: TIMESTAMP
-    
+### `orders` Table
 
+| Column Name | Data Type | Description                                      |
+|-------------|-----------|--------------------------------------------------|
+| id          | UUID      | Primary key, unique order ID                     |
+| user_id     | UUID      | Foreign key referencing `users.id`              |
+| items       | JSONB     | List of ordered items with quantity and item ID |
+| status      | TEXT      | Order status (`pending`, `preparing`, `ready`, `delivered`) |
+| created_at  | TIMESTAMP | Timestamp when the order was placed             |
+
+    
 Authentication
 --------------
 
