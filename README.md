@@ -89,14 +89,14 @@ Authentication
 *   Managed via AuthContext in src/context/AuthContext.tsx
     
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   const session = await supabase.auth.getSession();   `
+`   const session = await supabase.auth.getSession();   `
 
 Realtime Features
 -----------------
 
 Orders update in real-time using Supabase subscriptions:
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   codesupabase    .channel('orders')    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, callback)    .subscribe();   `
+`   codesupabase    .channel('orders')    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, callback)    .subscribe();   `
 
 UI/UX Details
 -------------
