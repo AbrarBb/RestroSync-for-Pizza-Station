@@ -16,11 +16,6 @@
 
 
 
-
-**Software Requirement Specification:**
-https://docs.google.com/document/d/1qUfPX_OE1OkHJ5yfROkL3wDWTnsqM2C6RpMZ_Xft4eY/edit?usp=sharing
-
-
 ## Folder Structure
 
 ```text
