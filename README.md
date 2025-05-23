@@ -147,16 +147,20 @@ Contribution Guide
 5.  Submit a pull request
     
 
-Documentation Links
--------------------
+## Documentation Links
 
-*   Live App
-    
-*   SRS Document
-    
-*   Supabase Docs
-    
-*   shadcn/ui Docs
+- [Live App](https://restrosync.lovable.app)  
+  Access the deployed RestroSync application for Pizza Station.
+
+- [Software Requirements Specification (SRS) Document](https://docs.google.com/document/d/1qUfPX_OE1OkHJ5yfROkL3wDWTnsqM2C6RpMZ_Xft4eY/edit?usp=sharing)  
+  Comprehensive documentation of project scope, features, and requirements.
+
+- [Supabase Documentation](https://supabase.com/docs)  
+  Learn more about the backend services used, including Auth, Database, and Realtime.
+
+- [shadcn/ui Documentation](https://ui.shadcn.dev)  
+  Reference for UI components used throughout the application.
+
     
 
 Future Improvements
