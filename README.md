@@ -15,21 +15,6 @@
 | Hosting     | Lovable (Frontend), Supabase (Backend)            |
 
 
-## Folder Structure
-
-├── public/                 # Static files
-├── src/
-│   ├── components/         # Reusable UI components
-│   ├── pages/              # Page views (Menu, Orders, Auth, etc.)
-│   ├── services/           # Supabase functions
-│   ├── lib/                # Helpers/utilities
-│   ├── hooks/              # Custom React hooks
-│   ├── context/            # Auth context
-│   └── App.tsx             # App routing and layout
-├── .env                    # Environment variables
-├── bun.lockb               # Bun lockfile
-├── tailwind.config.ts      # Tailwind settings
-└── vite.config.ts          # Vite settings
 
 
 **Software Requirement Specification:**
@@ -39,7 +24,7 @@ https://docs.google.com/document/d/1qUfPX_OE1OkHJ5yfROkL3wDWTnsqM2C6RpMZ_Xft4eY/
 Folder Structure
 ----------------
 
-Plain textANTLR4BashCC#CSSCoffeeScriptCMakeDartDjangoDockerEJSErlangGitGoGraphQLGroovyHTMLJavaJavaScriptJSONJSXKotlinLaTeXLessLuaMakefileMarkdownMATLABMarkupObjective-CPerlPHPPowerShell.propertiesProtocol BuffersPythonRRubySass (Sass)Sass (Scss)SchemeSQLShellSwiftSVGTSXTypeScriptWebAssemblyYAMLXML`   ├── public/                 # Static files  ├── src/  │   ├── components/         # Reusable UI components  │   ├── pages/              # Page views (Menu, Orders, Auth, etc.)  │   ├── services/           # Supabase functions  │   ├── lib/                # Helpers/utilities  │   ├── hooks/              # Custom React hooks  │   ├── context/            # Auth context  │   └── App.tsx             # App routing and layout  ├── .env                    # Environment variables  ├── bun.lockb               # Bun lockfile  ├── tailwind.config.ts      # Tailwind settings  └── vite.config.ts          # Vite settings   `
+`   ├── public/                 # Static files  ├── src/  │   ├── components/         # Reusable UI components  │   ├── pages/              # Page views (Menu, Orders, Auth, etc.)  │   ├── services/           # Supabase functions  │   ├── lib/                # Helpers/utilities  │   ├── hooks/              # Custom React hooks  │   ├── context/            # Auth context  │   └── App.tsx             # App routing and layout  ├── .env                    # Environment variables  ├── bun.lockb               # Bun lockfile  ├── tailwind.config.ts      # Tailwind settings  └── vite.config.ts          # Vite settings   `
 
 Supabase Schema Overview
 ------------------------
