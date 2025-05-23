@@ -21,10 +21,28 @@
 https://docs.google.com/document/d/1qUfPX_OE1OkHJ5yfROkL3wDWTnsqM2C6RpMZ_Xft4eY/edit?usp=sharing
 
 
-Folder Structure
-----------------
+## Folder Structure
 
-`   ├── public/                 # Static files  ├── src/  │   ├── components/         # Reusable UI components  │   ├── pages/              # Page views (Menu, Orders, Auth, etc.)  │   ├── services/           # Supabase functions  │   ├── lib/                # Helpers/utilities  │   ├── hooks/              # Custom React hooks  │   ├── context/            # Auth context  │   └── App.tsx             # App routing and layout  ├── .env                    # Environment variables  ├── bun.lockb               # Bun lockfile  ├── tailwind.config.ts      # Tailwind settings  └── vite.config.ts          # Vite settings   `
+```text
+RestroSync-for-Pizza-Station/
+├── public/                 # Static assets like icons, images
+├── src/                    # Source code
+│   ├── components/         # Reusable UI components
+│   ├── pages/              # Main views (Menu, Orders, Dashboard, etc.)
+│   ├── services/           # Supabase API interactions
+│   ├── lib/                # Utility functions and helpers
+│   ├── hooks/              # Custom React hooks
+│   ├── context/            # Global contexts (e.g., AuthContext)
+│   ├── App.tsx             # App entry and route definitions
+│   └── main.tsx            # Main app rendering
+├── .env                    # Environment variables (not committed)
+├── index.html              # Root HTML file
+├── tailwind.config.ts      # Tailwind CSS configuration
+├── vite.config.ts          # Vite development configuration
+├── tsconfig.json           # TypeScript configuration
+├── bun.lockb               # Bun package lock file
+└── README.md               # Project documentation
+```
 
 Supabase Schema Overview
 ------------------------
