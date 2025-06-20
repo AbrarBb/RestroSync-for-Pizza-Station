@@ -98,7 +98,8 @@ UI/UX Details
 *   shadcn/ui for UI components (alerts, buttons, modals)
     
 *   Optimized for tablets and smartphones
-    
+
+    ![](https://github.com/AbrarBb/RestroSync-for-Pizza-Station/blob/main/Screen_Shots/Vid.gif)
 
 
 Deployment (Production)
