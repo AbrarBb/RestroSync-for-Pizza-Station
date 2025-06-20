@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Order, transformOrderItems } from "@/lib/supabase";
@@ -11,10 +10,28 @@ export const orderService = {
     try {
       console.log('Creating new order:', orderData);
       
+      // Ensure we have all required fields
+      const completeOrderData = {
+        id: crypto.randomUUID(),
+        customer_name: orderData.customer_name,
+        customer_email: orderData.customer_email,
+        customer_phone: orderData.customer_phone,
+        customer_id: orderData.customer_id || null,
+        delivery_address: orderData.delivery_address || null,
+        order_type: orderData.order_type || 'delivery',
+        items: orderData.items,
+        total: orderData.total,
+        payment_method: orderData.payment_method,
+        payment_status: orderData.payment_status || 'pending',
+        status: orderData.status || 'pending',
+        special_requests: orderData.special_requests || null,
+        created_at: new Date().toISOString()
+      };
+      
       // Insert data and get result
       const { data, error } = await supabase
         .from('orders')
-        .insert(orderData)
+        .insert(completeOrderData)
         .select('id')
         .single();
       
@@ -23,13 +40,10 @@ export const orderService = {
         throw error;
       }
       
-      // Make sure data exists and has an id
-      if (!data || typeof data.id !== 'string') {
-        throw new Error('Failed to create order: No valid ID returned');
-      }
-      
-      const orderId = data.id;
+      // Return the ID from our generated UUID
+      const orderId = completeOrderData.id;
       console.log('Order created successfully:', orderId);
+      
       toast({
         title: "Order placed successfully",
         description: `Your order has been received. Order ID: ${orderId.substring(0, 8)}`,
@@ -47,7 +61,6 @@ export const orderService = {
     }
   },
   
-  // Get customer orders
   getCustomerOrders: async (customerId: string): Promise<Order[]> => {
     try {
       const { data, error } = await supabase
@@ -58,7 +71,6 @@ export const orderService = {
       
       if (error) throw error;
       
-      // Transform the orders to have properly typed items
       return data?.map(order => ({
         ...order,
         items: transformOrderItems(order.items),

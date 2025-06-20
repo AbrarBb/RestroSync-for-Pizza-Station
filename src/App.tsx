@@ -12,6 +12,7 @@ import MenuManagement from './pages/MenuManagement';
 import Reservations from './pages/Reservations';
 import Reports from './pages/Reports';
 import CustomerDashboard from './pages/CustomerDashboard';
+import Feedback from './pages/Feedback';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -20,11 +21,9 @@ import Customers from './pages/Customers';
 import DeliveryManagement from './pages/DeliveryManagement';
 import { setupStorage } from './lib/supabaseStorageHelper';
 
-// Initialize Supabase storage with improved logging
 console.log('Initializing application...');
 setupStorage();
 
-// Create React Query client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -90,6 +89,11 @@ function App() {
             <Route path="/reports" element={
               <ProtectedRoute allowedRoles={["admin", "staff"]}>
                 <Reports />
+              </ProtectedRoute>
+            } />
+            <Route path="/feedback" element={
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                <Feedback />
               </ProtectedRoute>
             } />
             <Route path="/delivery-management" element={

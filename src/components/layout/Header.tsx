@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 const Header = () => {
   const { user, userRole, signOut } = useAuth();
 
-  // Check if user is staff or admin (can access management features)
   const canAccessManagement = userRole === "admin" || userRole === "staff";
 
   return (
@@ -31,7 +30,6 @@ const Header = () => {
             </Button>
           ) : (
             <div className="flex items-center gap-2">
-              {/* Only show management options to admin and staff */}
               {canAccessManagement && (
                 <>
                   {userRole === "admin" && (
@@ -42,21 +40,21 @@ const Header = () => {
                   <Button asChild variant="outline" size="sm">
                     <Link to="/dashboard">Dashboard</Link>
                   </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/feedback">Feedback</Link>
+                  </Button>
                 </>
               )}
               
-              {/* Show Customer Dashboard for customers */}
               {userRole === "customer" && (
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/customer-dashboard">My Profile</Link>
-                </Button>
-              )}
-              
-              {/* Show Order History for customers */}
-              {userRole === "customer" && (
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/orders">My Orders</Link>
-                </Button>
+                <>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/customer-dashboard">My Profile</Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/orders">My Orders</Link>
+                  </Button>
+                </>
               )}
               
               <Button 

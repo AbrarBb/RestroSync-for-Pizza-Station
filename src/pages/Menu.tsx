@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -7,13 +6,15 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, Search, Plus, Minus, User, Loader2 } from "lucide-react";
+import { ShoppingCart, Search, Plus, Minus, User, Loader2, Star } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { menuItemsService, ordersService, MenuItem } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import OrderCheckoutForm from "@/components/checkout/OrderCheckoutForm";
+import { feedbackService, OrderFeedback } from "@/lib/feedbackService";
+import FeedbackDisplay from "@/components/feedback/FeedbackDisplay";
 
 // Cart item interface
 interface CartItem {
@@ -30,6 +31,7 @@ const Menu = () => {
   const [isGuestCheckout, setIsGuestCheckout] = useState(false);
   const [guestInfo, setGuestInfo] = useState({ name: "", email: "", phone: "" });
   const [isFullCheckoutOpen, setIsFullCheckoutOpen] = useState(false);
+  const [selectedItemForFeedback, setSelectedItemForFeedback] = useState<string | null>(null);
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -53,6 +55,15 @@ const Menu = () => {
     },
   });
   
+  // Get feedback for all menu items
+  const { data: allFeedback = [] } = useQuery({
+    queryKey: ["menuFeedback"],
+    queryFn: async () => {
+      const result = await feedbackService.getAllFeedback();
+      return result.feedback;
+    },
+  });
+
   // Filter menu items based on search query
   const filteredItems = (category: string) => {
     return menuItems
@@ -206,6 +217,21 @@ const Menu = () => {
     }
   };
 
+  // Get feedback for a specific menu item
+  const getItemFeedback = (itemId: string): OrderFeedback[] => {
+    return allFeedback.filter(feedback => 
+      feedback.order_id === itemId || 
+      (feedback as any).menu_item_id === itemId
+    );
+  };
+
+  const getAverageRating = (itemId: string): number => {
+    const itemFeedback = getItemFeedback(itemId);
+    if (itemFeedback.length === 0) return 0;
+    const total = itemFeedback.reduce((sum, feedback) => sum + feedback.rating, 0);
+    return total / itemFeedback.length;
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -304,6 +330,9 @@ const Menu = () => {
                               key={item.id}
                               item={item}
                               onAddToCart={() => addToCart(item.id, item.name, item.price)}
+                              feedback={getItemFeedback(item.id)}
+                              averageRating={getAverageRating(item.id)}
+                              onViewFeedback={() => setSelectedItemForFeedback(item.id)}
                             />
                           ))
                         ) : (
@@ -501,6 +530,22 @@ const Menu = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Feedback Dialog */}
+      <Dialog open={!!selectedItemForFeedback} onOpenChange={() => setSelectedItemForFeedback(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Customer Reviews</DialogTitle>
+            <DialogDescription>
+              See what other customers are saying about this item.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedItemForFeedback && (
+            <FeedbackDisplay feedback={getItemFeedback(selectedItemForFeedback)} />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Footer */}
       <footer className="bg-gray-100 py-6 mt-12">
         <div className="container mx-auto px-4 text-center text-gray-600">
@@ -514,9 +559,12 @@ const Menu = () => {
 interface MenuItemProps {
   item: MenuItem;
   onAddToCart: () => void;
+  feedback: OrderFeedback[];
+  averageRating: number;
+  onViewFeedback: () => void;
 }
 
-const MenuItemCard = ({ item, onAddToCart }: MenuItemProps) => {
+const MenuItemCard = ({ item, onAddToCart, feedback, averageRating, onViewFeedback }: MenuItemProps) => {
   // Ensure image is displayed correctly
   const imageUrl = item.image_url || "/placeholder.svg";
   
@@ -551,7 +599,37 @@ const MenuItemCard = ({ item, onAddToCart }: MenuItemProps) => {
           <h3 className="font-bold">{item.name}</h3>
           <span className="font-bold">৳{item.price.toFixed(2)}</span>
         </div>
-        <p className="text-gray-600 text-sm mb-4">{item.description}</p>
+        <p className="text-gray-600 text-sm mb-3">{item.description}</p>
+        
+        {/* Rating and Reviews */}
+        {averageRating > 0 && (
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center">
+              {Array.from({ length: 5 }, (_, i) => (
+                <Star
+                  key={i}
+                  className={`h-4 w-4 ${
+                    i < Math.round(averageRating)
+                      ? 'fill-yellow-400 text-yellow-400'
+                      : 'text-gray-300'
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-sm text-gray-600">
+              {averageRating.toFixed(1)} ({feedback.length} reviews)
+            </span>
+            {feedback.length > 0 && (
+              <Button 
+                variant="link" 
+                className="text-xs p-0 h-auto"
+                onClick={onViewFeedback}
+              >
+                View Reviews
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
       <CardFooter className="px-4 pb-4 pt-0 flex justify-end">
         <Button onClick={onAddToCart} disabled={item.status === "out-of-stock"}>

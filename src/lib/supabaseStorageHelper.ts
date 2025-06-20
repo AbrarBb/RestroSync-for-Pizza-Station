@@ -3,135 +3,162 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 /**
- * Create a storage bucket if it doesn't exist
- * This function should be called at app startup
+ * Enhanced storage service for handling file uploads and management
  */
-export const initializeStorage = async () => {
-  console.log('Initializing Supabase storage buckets...');
-  
-  try {
-    // Get list of existing buckets
-    const { data: buckets, error } = await supabase.storage.listBuckets();
-    
-    if (error) {
-      console.error('Error listing buckets:', error);
-      return false;
-    }
-    
-    // Check for required buckets
-    const requiredBuckets = ['avatars', 'menu_images', 'reports'];
-    const existingBucketNames = buckets?.map(b => b.name) || [];
-    
-    // Create any missing buckets
-    for (const bucketName of requiredBuckets) {
-      if (!existingBucketNames.includes(bucketName)) {
-        console.log(`Creating bucket: ${bucketName}`);
-        await createBucket(bucketName);
-      }
-    }
-    
-    console.log('Storage initialization complete');
-    return true;
-  } catch (error) {
-    console.error('Storage initialization failed:', error);
-    return false;
+
+// Define bucket configurations
+const BUCKET_CONFIGS = {
+  avatars: {
+    name: 'avatars',
+    public: true,
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+    maxFileSize: 5 * 1024 * 1024, // 5MB
+  },
+  menu_images: {
+    name: 'menu_images', 
+    public: true,
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+    maxFileSize: 10 * 1024 * 1024, // 10MB
   }
 };
 
-/**
- * Create a new storage bucket
- */
-export const createBucket = async (bucketName: string, isPublic: boolean = true) => {
+export const ensureBucketExists = async (bucketName: string, isPublic: boolean = true): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.storage.createBucket(bucketName, {
+    console.log(`Checking if bucket '${bucketName}' exists...`);
+    
+    // List existing buckets
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+      return false;
+    }
+    
+    // Check if bucket already exists
+    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+    
+    if (bucketExists) {
+      console.log(`Bucket '${bucketName}' already exists`);
+      return true;
+    }
+    
+    // Create the bucket if it doesn't exist
+    console.log(`Creating bucket '${bucketName}'...`);
+    const { data: createData, error: createError } = await supabase.storage.createBucket(bucketName, {
       public: isPublic,
-      fileSizeLimit: 10485760, // 10MB
+      allowedMimeTypes: BUCKET_CONFIGS[bucketName as keyof typeof BUCKET_CONFIGS]?.allowedMimeTypes,
+      fileSizeLimit: BUCKET_CONFIGS[bucketName as keyof typeof BUCKET_CONFIGS]?.maxFileSize
     });
     
-    if (error) {
-      console.error(`Error creating bucket ${bucketName}:`, error);
+    if (createError) {
+      console.error(`Error creating bucket '${bucketName}':`, createError);
+      toast({
+        title: "Storage setup failed",
+        description: `Failed to create ${bucketName} bucket: ${createError.message}`,
+        variant: "destructive"
+      });
       return false;
     }
     
-    console.log(`Bucket ${bucketName} created successfully`);
+    console.log(`Bucket '${bucketName}' created successfully:`, createData);
     return true;
   } catch (error) {
-    console.error(`Error creating bucket ${bucketName}:`, error);
+    console.error(`Unexpected error with bucket '${bucketName}':`, error);
     return false;
   }
 };
 
-/**
- * Upload a file to a storage bucket
- */
 export const uploadFile = async (
   bucketName: string, 
   filePath: string, 
   file: File
-): Promise<string | null> => {
+): Promise<{ url: string | null; error: string | null }> => {
   try {
-    console.log(`Uploading file to ${bucketName}/${filePath}`, file);
+    console.log(`Uploading file to ${bucketName}/${filePath}...`);
     
-    // Ensure file is valid
-    if (!file || file.size === 0) {
-      throw new Error("Invalid file. Please select a valid file to upload.");
+    // Ensure bucket exists first
+    const bucketReady = await ensureBucketExists(bucketName, true);
+    if (!bucketReady) {
+      return { url: null, error: `Bucket ${bucketName} is not ready` };
     }
     
-    // Check if bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(b => b.name === bucketName);
-    
-    if (!bucketExists) {
-      console.log(`Bucket ${bucketName} doesn't exist, creating it...`);
-      await createBucket(bucketName, true);
+    // Validate file type and size
+    const config = BUCKET_CONFIGS[bucketName as keyof typeof BUCKET_CONFIGS];
+    if (config) {
+      if (!config.allowedMimeTypes.includes(file.type)) {
+        return { url: null, error: `File type ${file.type} not allowed` };
+      }
+      
+      if (file.size > config.maxFileSize) {
+        return { url: null, error: `File size exceeds ${config.maxFileSize / 1024 / 1024}MB limit` };
+      }
     }
     
-    const { data, error } = await supabase.storage
+    // Remove existing file if it exists (for updates)
+    const { error: deleteError } = await supabase.storage
+      .from(bucketName)
+      .remove([filePath]);
+    
+    if (deleteError) {
+      console.log('No existing file to delete or deletion failed:', deleteError.message);
+    }
+    
+    // Upload the new file
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucketName)
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: true // Set to true to overwrite existing files
+        upsert: true
       });
     
-    if (error) {
-      console.error(`Error uploading to ${bucketName}:`, error);
-      throw error;
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      return { url: null, error: uploadError.message };
     }
     
-    // Fix: Make sure we have path data before trying to get URL
-    const path = data?.path || filePath;
+    console.log('File uploaded successfully:', uploadData);
     
-    // Get public URL - improved handling
-    try {
-      const { data: urlData } = await supabase.storage
-        .from(bucketName)
-        .getPublicUrl(path);
-      
-      if (!urlData?.publicUrl) {
-        throw new Error('Failed to get public URL');
-      }
-      
-      console.log(`File uploaded successfully, URL: ${urlData.publicUrl}`);
-      return urlData.publicUrl;
-    } catch (urlError) {
-      console.error('Error getting public URL:', urlError);
-      throw new Error('Failed to get public URL for uploaded avatar');
+    // Get the public URL
+    const { data: urlData } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(filePath);
+    
+    if (!urlData?.publicUrl) {
+      console.error('Failed to get public URL for uploaded file');
+      return { url: null, error: 'Failed to get public URL' };
     }
+    
+    console.log('Public URL generated:', urlData.publicUrl);
+    return { url: urlData.publicUrl, error: null };
+    
   } catch (error: any) {
-    console.error('File upload error:', error);
-    toast({
-      title: "Upload failed",
-      description: error.message || "File upload failed. Please try again.",
-      variant: "destructive",
-    });
-    return null;
+    console.error('Unexpected upload error:', error);
+    return { url: null, error: error.message || 'Unexpected error during upload' };
   }
 };
 
-/**
- * Get a file from a storage bucket
- */
-export const getFileUrl = (bucketName: string, filePath: string): string => {
+export const deleteFile = async (bucketName: string, filePath: string): Promise<boolean> => {
+  try {
+    console.log(`Deleting file from ${bucketName}/${filePath}...`);
+    
+    const { error } = await supabase.storage
+      .from(bucketName)
+      .remove([filePath]);
+    
+    if (error) {
+      console.error('Delete error:', error);
+      return false;
+    }
+    
+    console.log('File deleted successfully');
+    return true;
+  } catch (error: any) {
+    console.error('Unexpected delete error:', error);
+    return false;
+  }
+};
+
+export const getPublicUrl = (bucketName: string, filePath: string): string => {
   const { data } = supabase.storage
     .from(bucketName)
     .getPublicUrl(filePath);
@@ -139,23 +166,27 @@ export const getFileUrl = (bucketName: string, filePath: string): string => {
   return data.publicUrl;
 };
 
-// Initialize storage buckets on app load
-export const setupStorage = () => {
-  initializeStorage()
-    .then(success => {
-      if (success) {
-        console.log('Supabase storage successfully initialized');
-      } else {
-        console.warn('Supabase storage initialization had issues');
-        // Try again after a short delay
-        setTimeout(() => {
-          initializeStorage()
-            .then(retry => console.log('Retry initialization result:', retry))
-            .catch(err => console.error('Retry initialization failed:', err));
-        }, 2000);
-      }
-    })
-    .catch(error => {
-      console.error('Failed to initialize storage:', error);
+// Initialize all required storage buckets
+export const setupStorage = async (): Promise<void> => {
+  console.log('Setting up storage buckets...');
+  
+  try {
+    // Create avatars bucket
+    await ensureBucketExists('avatars', true);
+    
+    // Create menu images bucket
+    await ensureBucketExists('menu_images', true);
+    
+    console.log('Storage setup completed successfully');
+  } catch (error) {
+    console.error('Storage setup failed:', error);
+    toast({
+      title: "Storage initialization failed",
+      description: "Some features may not work properly. Please contact support.",
+      variant: "destructive"
     });
+  }
 };
+
+// Auto-setup storage when this module is imported
+setupStorage();
