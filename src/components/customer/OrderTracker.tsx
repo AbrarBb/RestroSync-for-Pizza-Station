@@ -133,7 +133,7 @@ const OrderTracker = ({ orderId }: OrderTrackerProps) => {
     const message = {
       order_id: orderId,
       sender_id: user.id,
-      sender_role: userRole,
+      sender_role: userRole as OrderMessage['sender_role'],
       message: newMessage.trim()
     };
     

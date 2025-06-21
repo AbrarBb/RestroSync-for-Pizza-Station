@@ -5,14 +5,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
+export type UserRole = 'admin' | 'staff' | 'customer';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  userRole: string | null;
+  userRole: UserRole | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, role?: string) => Promise<void>;
   signOut: () => Promise<void>;
   loading: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,10 +31,10 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const determineUserRole = (email: string | undefined): string => {
+  const determineUserRole = (email: string | undefined): UserRole => {
     if (!email) return 'customer';
     
     if (email === 'admin@pizzastation.com') return 'admin';
@@ -187,6 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signOut,
     loading,
+    isLoading: loading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
