@@ -22,7 +22,7 @@ const BUCKET_CONFIGS = {
   }
 };
 
-export const ensureBucketExists = async (bucketName: string, isPublic: boolean = true): Promise<boolean> => {
+export const checkBucketExists = async (bucketName: string): Promise<boolean> => {
   try {
     console.log(`Checking if bucket '${bucketName}' exists...`);
     
@@ -38,32 +38,14 @@ export const ensureBucketExists = async (bucketName: string, isPublic: boolean =
     const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
     
     if (bucketExists) {
-      console.log(`Bucket '${bucketName}' already exists`);
+      console.log(`Bucket '${bucketName}' exists`);
       return true;
     }
     
-    // Create the bucket if it doesn't exist
-    console.log(`Creating bucket '${bucketName}'...`);
-    const { data: createData, error: createError } = await supabase.storage.createBucket(bucketName, {
-      public: isPublic,
-      allowedMimeTypes: BUCKET_CONFIGS[bucketName as keyof typeof BUCKET_CONFIGS]?.allowedMimeTypes,
-      fileSizeLimit: BUCKET_CONFIGS[bucketName as keyof typeof BUCKET_CONFIGS]?.maxFileSize
-    });
-    
-    if (createError) {
-      console.error(`Error creating bucket '${bucketName}':`, createError);
-      toast({
-        title: "Storage setup failed",
-        description: `Failed to create ${bucketName} bucket: ${createError.message}`,
-        variant: "destructive"
-      });
-      return false;
-    }
-    
-    console.log(`Bucket '${bucketName}' created successfully:`, createData);
-    return true;
+    console.log(`Bucket '${bucketName}' does not exist`);
+    return false;
   } catch (error) {
-    console.error(`Unexpected error with bucket '${bucketName}':`, error);
+    console.error(`Error checking bucket '${bucketName}':`, error);
     return false;
   }
 };
@@ -76,10 +58,17 @@ export const uploadFile = async (
   try {
     console.log(`Uploading file to ${bucketName}/${filePath}...`);
     
-    // Ensure bucket exists first
-    const bucketReady = await ensureBucketExists(bucketName, true);
-    if (!bucketReady) {
-      return { url: null, error: `Bucket ${bucketName} is not ready` };
+    // Check if bucket exists first
+    const bucketExists = await checkBucketExists(bucketName);
+    if (!bucketExists) {
+      const errorMsg = `Storage bucket '${bucketName}' does not exist. Please contact administrator to set up storage.`;
+      console.error(errorMsg);
+      toast({
+        title: "Storage not available",
+        description: errorMsg,
+        variant: "destructive"
+      });
+      return { url: null, error: errorMsg };
     }
     
     // Validate file type and size
@@ -166,27 +155,20 @@ export const getPublicUrl = (bucketName: string, filePath: string): string => {
   return data.publicUrl;
 };
 
-// Initialize all required storage buckets
-export const setupStorage = async (): Promise<void> => {
-  console.log('Setting up storage buckets...');
+// Initialize storage check (but don't auto-create buckets)
+export const initializeStorage = async (): Promise<void> => {
+  console.log('Checking storage availability...');
   
   try {
-    // Create avatars bucket
-    await ensureBucketExists('avatars', true);
+    // Just check if buckets exist, don't try to create them
+    await checkBucketExists('avatars');
+    await checkBucketExists('menu_images');
     
-    // Create menu images bucket
-    await ensureBucketExists('menu_images', true);
-    
-    console.log('Storage setup completed successfully');
+    console.log('Storage check completed');
   } catch (error) {
-    console.error('Storage setup failed:', error);
-    toast({
-      title: "Storage initialization failed",
-      description: "Some features may not work properly. Please contact support.",
-      variant: "destructive"
-    });
+    console.error('Storage check failed:', error);
   }
 };
 
-// Auto-setup storage when this module is imported
-setupStorage();
+// Initialize storage when this module is imported
+initializeStorage();
