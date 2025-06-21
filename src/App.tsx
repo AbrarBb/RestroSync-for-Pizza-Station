@@ -1,4 +1,3 @@
-
 import { Routes, Route, BrowserRouter } from 'react-router-dom';
 import Index from './pages/Index';
 import Login from './pages/Login';
@@ -19,10 +18,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ProtectedRoute from './components/ProtectedRoute';
 import Customers from './pages/Customers';
 import DeliveryManagement from './pages/DeliveryManagement';
-import { setupStorage } from './lib/supabaseStorageHelper';
+import { initializeStorage } from './lib/supabaseStorageHelper';
 
 console.log('Initializing application...');
-setupStorage();
+initializeStorage();
 
 const queryClient = new QueryClient({
   defaultOptions: {
