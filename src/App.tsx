@@ -1,3 +1,4 @@
+
 import { Routes, Route, BrowserRouter } from 'react-router-dom';
 import Index from './pages/Index';
 import Login from './pages/Login';
@@ -49,15 +50,17 @@ function App() {
               </ProtectedRoute>
             } />
             
+            {/* Orders - accessible by all authenticated users */}
+            <Route path="/orders" element={
+              <ProtectedRoute allowedRoles={["admin", "staff", "customer"]}>
+                <Orders />
+              </ProtectedRoute>
+            } />
+            
             {/* Admin/Staff Routes */}
             <Route path="/dashboard" element={
               <ProtectedRoute allowedRoles={["admin", "staff"]}>
                 <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/orders" element={
-              <ProtectedRoute allowedRoles={["admin", "staff"]}>
-                <Orders />
               </ProtectedRoute>
             } />
             <Route path="/staff" element={
