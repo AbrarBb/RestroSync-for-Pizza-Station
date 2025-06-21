@@ -162,6 +162,7 @@ export type Database = {
           payment_method: string | null
           payment_status: string
           rider_id: string | null
+          special_requests: string | null
           status: string
           table_number: string | null
           total: number
@@ -179,6 +180,7 @@ export type Database = {
           payment_method?: string | null
           payment_status: string
           rider_id?: string | null
+          special_requests?: string | null
           status: string
           table_number?: string | null
           total: number
@@ -196,6 +198,7 @@ export type Database = {
           payment_method?: string | null
           payment_status?: string
           rider_id?: string | null
+          special_requests?: string | null
           status?: string
           table_number?: string | null
           total?: number
