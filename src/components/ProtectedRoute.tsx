@@ -17,6 +17,8 @@ const ProtectedRoute = ({
 }: ProtectedRouteProps) => {
   const { user, userRole, isLoading } = useAuth();
   
+  console.log('ProtectedRoute - user:', user?.email, 'userRole:', userRole, 'allowedRoles:', allowedRoles, 'isLoading:', isLoading);
+  
   // Show loading state
   if (isLoading) {
     return (
@@ -42,8 +44,19 @@ const ProtectedRoute = ({
     return <Navigate to="/login" replace />;
   }
   
+  // If no userRole is determined yet but user exists, show loading
+  if (!userRole) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-2 text-muted-foreground">Determining user permissions...</p>
+      </div>
+    );
+  }
+  
   // Check role-based access
-  if (userRole && !allowedRoles.includes(userRole)) {
+  if (!allowedRoles.includes(userRole)) {
+    console.log('Access denied - userRole:', userRole, 'not in allowedRoles:', allowedRoles);
     toast({
       title: "Access denied",
       description: `This area is restricted to ${allowedRoles.join(" or ")} roles.`,
@@ -60,6 +73,7 @@ const ProtectedRoute = ({
     }
   }
   
+  console.log('Access granted - userRole:', userRole, 'is in allowedRoles:', allowedRoles);
   return <>{children}</>;
 };
 
