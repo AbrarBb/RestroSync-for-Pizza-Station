@@ -10,7 +10,8 @@ import { ShoppingCart, Search, Plus, Minus, User, Loader2, Star } from "lucide-r
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { menuItemsService, ordersService, MenuItem } from "@/lib/supabase";
+import { menuItemsService, MenuItem } from "@/lib/supabase";
+import { orderService } from "@/lib/orderService";
 import { Badge } from "@/components/ui/badge";
 import OrderCheckoutForm from "@/components/checkout/OrderCheckoutForm";
 import { feedbackService, OrderFeedback } from "@/lib/feedbackService";
@@ -161,20 +162,23 @@ const Menu = () => {
         payment_method: selectedPaymentMethod
       };
 
-      // Create order
-      await ordersService.create(orderData);
+      console.log('Guest checkout - creating order:', orderData);
+      // Use orderService.createOrder instead of ordersService.create
+      const orderId = await orderService.createOrder(orderData);
 
-      // Show success toast
-      toast({
-        title: "Order Placed",
-        description: `Thank you ${guestInfo.name}! Your order has been placed successfully.`,
-      });
+      if (orderId) {
+        // Show success toast
+        toast({
+          title: "Order Placed",
+          description: `Thank you ${guestInfo.name}! Your order has been placed successfully.`,
+        });
 
-      // Reset cart and checkout state
-      setCart([]);
-      setIsCheckoutDialogOpen(false);
-      setIsGuestCheckout(false);
-      setGuestInfo({ name: "", email: "", phone: "" });
+        // Reset cart and checkout state
+        setCart([]);
+        setIsCheckoutDialogOpen(false);
+        setIsGuestCheckout(false);
+        setGuestInfo({ name: "", email: "", phone: "" });
+      }
     } catch (error) {
       console.error("Error placing order:", error);
       toast({
@@ -194,23 +198,28 @@ const Menu = () => {
   // Handle authenticated user order submission
   const handleSubmitOrder = async (orderData: any): Promise<boolean> => {
     try {
-      // Create order
-      await ordersService.create(orderData);
+      console.log('Authenticated user checkout - creating order:', orderData);
+      // Use orderService.createOrder instead of ordersService.create
+      const orderId = await orderService.createOrder(orderData);
       
-      // Reset cart and checkout state
-      setCart([]);
-      setIsFullCheckoutOpen(false);
+      if (orderId) {
+        // Reset cart and checkout state
+        setCart([]);
+        setIsFullCheckoutOpen(false);
+        
+        // Show success toast
+        toast({
+          title: "Order Placed Successfully",
+          description: "Your order has been placed and is being processed.",
+        });
+        
+        // Redirect to orders page
+        navigate('/orders');
+        
+        return true;
+      }
       
-      // Show success toast
-      toast({
-        title: "Order Placed Successfully",
-        description: "Your order has been placed and is being processed.",
-      });
-      
-      // Redirect to orders page
-      navigate('/orders');
-      
-      return true;
+      return false;
     } catch (error) {
       console.error("Error placing order:", error);
       return false;
