@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -156,7 +157,7 @@ const Menu = () => {
         })),
         total: cartTotal,
         status: "pending" as const,
-        order_type: "pickup" as const,
+        order_type: "delivery" as const, // Use valid order type
         created_at: new Date().toISOString(),
         payment_status: "pending" as const,
         payment_method: selectedPaymentMethod

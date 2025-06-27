@@ -10,7 +10,7 @@ export const orderService = {
     try {
       console.log('Creating new order:', orderData);
       
-      // Ensure we have all required fields
+      // Ensure we have all required fields and correct order_type values
       const completeOrderData = {
         id: crypto.randomUUID(),
         customer_name: orderData.customer_name,
@@ -18,7 +18,7 @@ export const orderService = {
         customer_phone: orderData.customer_phone,
         customer_id: orderData.customer_id || null,
         delivery_address: orderData.delivery_address || null,
-        order_type: orderData.order_type || 'delivery',
+        order_type: orderData.order_type || 'delivery', // Ensure valid order type
         items: orderData.items,
         total: orderData.total,
         payment_method: orderData.payment_method,
@@ -27,6 +27,15 @@ export const orderService = {
         special_requests: orderData.special_requests || null,
         created_at: new Date().toISOString()
       };
+
+      // Validate order_type to ensure it matches database constraint
+      const validOrderTypes = ['delivery', 'pickup', 'dine_in'];
+      if (!validOrderTypes.includes(completeOrderData.order_type)) {
+        console.error('Invalid order_type:', completeOrderData.order_type);
+        completeOrderData.order_type = 'delivery'; // Default to delivery
+      }
+      
+      console.log('Final order data to insert:', completeOrderData);
       
       // Insert data and get result
       const { data, error } = await supabase
