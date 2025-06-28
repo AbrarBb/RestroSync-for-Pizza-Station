@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -34,6 +33,7 @@ const Menu = () => {
   const [guestInfo, setGuestInfo] = useState({ name: "", email: "", phone: "" });
   const [isFullCheckoutOpen, setIsFullCheckoutOpen] = useState(false);
   const [selectedItemForFeedback, setSelectedItemForFeedback] = useState<string | null>(null);
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -131,6 +131,15 @@ const Menu = () => {
 
   // Handle checkout process
   const handleCheckout = () => {
+    if (cart.length === 0) {
+      toast({
+        title: "Cart is empty",
+        description: "Please add items to your cart before checking out.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // If user is logged in, proceed to full checkout form
     if (user) {
       setIsFullCheckoutOpen(true);
@@ -143,12 +152,31 @@ const Menu = () => {
 
   // Process the checkout for guest users
   const processGuestCheckout = async () => {
+    if (isProcessingOrder) return;
+    
+    setIsProcessingOrder(true);
+    
     try {
+      console.log('Starting guest checkout process...');
+      
+      // Validate guest info
+      if (!guestInfo.name || !guestInfo.email || !guestInfo.phone) {
+        toast({
+          title: "Missing Information",
+          description: "Please fill in all required fields.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Prepare order data
-      const orderData: any = {
+      const orderData = {
         customer_name: guestInfo.name,
         customer_email: guestInfo.email,
         customer_phone: guestInfo.phone,
+        customer_id: null,
+        delivery_address: "Guest Order - Address to be confirmed",
+        order_type: "delivery" as const,
         items: cart.map(item => ({
           id: item.id,
           name: item.name,
@@ -156,37 +184,45 @@ const Menu = () => {
           quantity: item.quantity
         })),
         total: cartTotal,
-        status: "pending" as const,
-        order_type: "delivery" as const, // Use valid order type
-        created_at: new Date().toISOString(),
+        payment_method: selectedPaymentMethod,
         payment_status: "pending" as const,
-        payment_method: selectedPaymentMethod
+        status: "pending" as const,
+        special_requests: null
       };
 
       console.log('Guest checkout - creating order:', orderData);
-      // Use orderService.createOrder instead of ordersService.create
+      
       const orderId = await orderService.createOrder(orderData);
 
       if (orderId) {
-        // Show success toast
+        console.log('Guest order created successfully:', orderId);
+        
+        // Show success message with order ID
         toast({
-          title: "Order Placed",
-          description: `Thank you ${guestInfo.name}! Your order has been placed successfully.`,
+          title: "Order Placed Successfully!",
+          description: `Thank you ${guestInfo.name}! Your order #${orderId.substring(0, 8)} has been placed. We'll contact you shortly.`,
         });
 
-        // Reset cart and checkout state
+        // Reset all states
         setCart([]);
         setIsCheckoutDialogOpen(false);
         setIsGuestCheckout(false);
         setGuestInfo({ name: "", email: "", phone: "" });
+        
+        // Redirect to home page with success message
+        navigate('/', { state: { orderSuccess: true, orderId: orderId.substring(0, 8) } });
+      } else {
+        throw new Error('Failed to create order');
       }
-    } catch (error) {
-      console.error("Error placing order:", error);
+    } catch (error: any) {
+      console.error("Error placing guest order:", error);
       toast({
-        title: "Error",
-        description: "Failed to place your order. Please try again.",
+        title: "Order Failed",
+        description: error.message || "Failed to place your order. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsProcessingOrder(false);
     }
   };
 
@@ -198,32 +234,48 @@ const Menu = () => {
   
   // Handle authenticated user order submission
   const handleSubmitOrder = async (orderData: any): Promise<boolean> => {
+    if (isProcessingOrder) return false;
+    
+    setIsProcessingOrder(true);
+    console.log('Starting authenticated user checkout process...');
+    
     try {
       console.log('Authenticated user checkout - creating order:', orderData);
-      // Use orderService.createOrder instead of ordersService.create
+      
       const orderId = await orderService.createOrder(orderData);
       
       if (orderId) {
+        console.log('Authenticated order created successfully:', orderId);
+        
         // Reset cart and checkout state
         setCart([]);
         setIsFullCheckoutOpen(false);
         
-        // Show success toast
+        // Show success toast with order ID
         toast({
-          title: "Order Placed Successfully",
-          description: "Your order has been placed and is being processed.",
+          title: "Order Placed Successfully!",
+          description: `Your order #${orderId.substring(0, 8)} has been placed and is being processed.`,
         });
         
-        // Redirect to orders page
-        navigate('/orders');
+        // Small delay to ensure user sees the success message
+        setTimeout(() => {
+          navigate('/orders', { state: { newOrderId: orderId } });
+        }, 1000);
         
         return true;
+      } else {
+        throw new Error('Failed to create order - no order ID returned');
       }
-      
+    } catch (error: any) {
+      console.error("Error placing authenticated order:", error);
+      toast({
+        title: "Order Failed",
+        description: error.message || "Failed to place your order. Please try again.",
+        variant: "destructive",
+      });
       return false;
-    } catch (error) {
-      console.error("Error placing order:", error);
-      return false;
+    } finally {
+      setIsProcessingOrder(false);
     }
   };
 
@@ -418,10 +470,17 @@ const Menu = () => {
                 <CardFooter>
                   <Button 
                     className="w-full" 
-                    disabled={cart.length === 0}
+                    disabled={cart.length === 0 || isProcessingOrder}
                     onClick={handleCheckout}
                   >
-                    Proceed to Checkout
+                    {isProcessingOrder ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Proceed to Checkout"
+                    )}
                   </Button>
                 </CardFooter>
               </Card>
@@ -444,31 +503,34 @@ const Menu = () => {
             <form onSubmit={handleGuestCheckoutSubmit}>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="guest-name">Name</Label>
+                  <Label htmlFor="guest-name">Name *</Label>
                   <Input
                     id="guest-name"
                     value={guestInfo.name}
                     onChange={(e) => setGuestInfo({...guestInfo, name: e.target.value})}
                     required
+                    disabled={isProcessingOrder}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="guest-email">Email</Label>
+                  <Label htmlFor="guest-email">Email *</Label>
                   <Input
                     id="guest-email"
                     type="email"
                     value={guestInfo.email}
                     onChange={(e) => setGuestInfo({...guestInfo, email: e.target.value})}
                     required
+                    disabled={isProcessingOrder}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="guest-phone">Phone Number</Label>
+                  <Label htmlFor="guest-phone">Phone Number *</Label>
                   <Input
                     id="guest-phone"
                     value={guestInfo.phone}
                     onChange={(e) => setGuestInfo({...guestInfo, phone: e.target.value})}
                     required
+                    disabled={isProcessingOrder}
                   />
                 </div>
                 
@@ -479,6 +541,7 @@ const Menu = () => {
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     value={selectedPaymentMethod}
                     onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                    disabled={isProcessingOrder}
                   >
                     {paymentMethods.map(method => (
                       <option key={method.id} value={method.id}>
@@ -495,15 +558,29 @@ const Menu = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsGuestCheckout(false)}>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsGuestCheckout(false)}
+                  disabled={isProcessingOrder}
+                >
                   Back
                 </Button>
-                <Button type="submit">Complete Order</Button>
+                <Button type="submit" disabled={isProcessingOrder}>
+                  {isProcessingOrder ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Complete Order"
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           ) : (
             <div className="grid gap-4 py-4">
-              <Button onClick={() => navigate('/login')} className="w-full">
+              <Button onClick={() => navigate('/login')} className="w-full" disabled={isProcessingOrder}>
                 Sign In to Continue
               </Button>
               <div className="relative">
@@ -514,7 +591,12 @@ const Menu = () => {
                   <span className="bg-background px-2 text-muted-foreground">Or</span>
                 </div>
               </div>
-              <Button variant="outline" onClick={() => setIsGuestCheckout(true)} className="w-full">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsGuestCheckout(true)} 
+                className="w-full"
+                disabled={isProcessingOrder}
+              >
                 Continue as Guest
               </Button>
             </div>
