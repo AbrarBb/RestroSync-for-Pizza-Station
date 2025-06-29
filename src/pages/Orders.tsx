@@ -45,9 +45,14 @@ import {
   AtSign,
   Calendar,
   Bookmark,
+  Home,
+  LogOut
 } from "lucide-react";
 import { Order, ordersService, transformOrderItems } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { orderService } from "@/lib/orderService";
+import Header from "@/components/layout/Header";
+import { Link } from "react-router-dom";
 
 const Orders = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -60,7 +65,7 @@ const Orders = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, userRole, signOut } = useAuth();
 
   const toggleSheet = (order: Order | null) => {
     setSelectedOrder(order);
@@ -150,7 +155,6 @@ const Orders = () => {
     return null;
   };
   
-  // Add transform function to handle orders from API
   const processOrders = (data: any[]): Order[] => {
     if (!data) return [];
     
@@ -163,13 +167,21 @@ const Orders = () => {
     }));
   };
 
-  // In the useQuery function, add transformOrderItems:
+  // Use different query based on user role
   const { data: allOrders = [], isLoading } = useQuery({
-    queryKey: ["orders"],
+    queryKey: ["orders", userRole, user?.id],
     queryFn: async () => {
-      const data = await ordersService.getAll();
-      return processOrders(data);
+      if (userRole === "customer" && user) {
+        // Customer sees only their orders
+        const data = await orderService.getCustomerOrders(user.id);
+        return processOrders(data);
+      } else {
+        // Admin/staff see all orders
+        const data = await ordersService.getAll();
+        return processOrders(data);
+      }
     },
+    enabled: !!user && !!userRole,
   });
 
   const filteredOrders = allOrders
@@ -204,15 +216,344 @@ const Orders = () => {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
+      <div className="min-h-screen bg-gray-50">
+        <Header />
         <div className="flex justify-center items-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="ml-2 text-muted-foreground">Loading orders...</p>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
+  // Customer view - use regular layout
+  if (userRole === "customer") {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-3xl font-bold">My Orders</h1>
+            <div className="flex gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link to="/">
+                  <Home className="h-4 w-4 mr-2" />
+                  Home
+                </Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link to="/menu">Order Now</Link>
+              </Button>
+            </div>
+          </div>
+
+          {/* Search and Filters for customers */}
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="relative w-full md:w-1/3">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                type="search"
+                placeholder="Search orders..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="flex gap-2 flex-wrap w-full md:w-2/3">
+              <Button
+                variant={statusFilter === null ? "default" : "outline"}
+                onClick={() => setStatusFilter(null)}
+                size="sm"
+              >
+                All Statuses
+              </Button>
+              <Button
+                variant={statusFilter === "pending" ? "default" : "outline"}
+                onClick={() => setStatusFilter("pending")}
+                size="sm"
+              >
+                Pending
+              </Button>
+              <Button
+                variant={statusFilter === "preparing" ? "default" : "outline"}
+                onClick={() => setStatusFilter("preparing")}
+                size="sm"
+              >
+                Preparing
+              </Button>
+              <Button
+                variant={statusFilter === "ready" ? "default" : "outline"}
+                onClick={() => setStatusFilter("ready")}
+                size="sm"
+              >
+                Ready
+              </Button>
+              <Button
+                variant={statusFilter === "delivered" ? "default" : "outline"}
+                onClick={() => setStatusFilter("delivered")}
+                size="sm"
+              >
+                Delivered
+              </Button>
+            </div>
+          </div>
+
+          {/* Orders Table for customers */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Orders</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {filteredOrders.length === 0 ? (
+                <div className="text-center py-10">
+                  <p className="text-muted-foreground mb-4">No orders found.</p>
+                  <Button asChild>
+                    <Link to="/menu">Place Your First Order</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead onClick={() => handleSort("id")} className="cursor-pointer">
+                          Order ID {getSortIcon("id")}
+                        </TableHead>
+                        <TableHead>Items</TableHead>
+                        <TableHead onClick={() => handleSort("status")} className="cursor-pointer">
+                          Status {getSortIcon("status")}
+                        </TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead onClick={() => handleSort("created_at")} className="cursor-pointer">
+                          Order Date {getSortIcon("created_at")}
+                        </TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">{order.id.substring(0, 8).toUpperCase()}</TableCell>
+                          <TableCell>
+                            {order.items.slice(0, 3).map((item) => (
+                              <div key={item.id} className="text-sm">
+                                {item.quantity}x {item.name}
+                              </div>
+                            ))}
+                            {order.items.length > 3 && <div className="text-xs text-gray-500">+{order.items.length - 3} more</div>}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={`${getStatusColor(order.status)} capitalize`}>
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              {getDeliveryMethodIcon(order.order_type)}
+                              <span className="text-xs capitalize">{order.order_type}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{formatDate(order.created_at)}</TableCell>
+                          <TableCell className="text-right">৳{order.total.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm" onClick={() => toggleSheet(order)}>
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </main>
+
+        {/* Order Details Sheet - same for both customer and admin */}
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+          <SheetContent className="sm:max-w-lg">
+            <SheetHeader>
+              <SheetTitle>Order Details</SheetTitle>
+              <SheetDescription>
+                Details for order {selectedOrder?.id.substring(0, 8).toUpperCase()}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="grid gap-4">
+              {/* ... keep existing code (order details content) */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Customer Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedOrder?.customer_name ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        <span>{selectedOrder.customer_name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <AtSign className="h-4 w-4" />
+                        <span>{selectedOrder.customer_email}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4" />
+                        <span>{selectedOrder.customer_phone}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-gray-500">No customer information available</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Order Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Bookmark className="h-4 w-4" />
+                    <span>Order ID: {selectedOrder?.id.substring(0, 8).toUpperCase()}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>Order Date: {formatDate(selectedOrder?.created_at || "")}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getDeliveryMethodIcon(selectedOrder?.order_type || "")}
+                    <span className="capitalize">
+                      {selectedOrder?.order_type}
+                      {selectedOrder?.order_type === "delivery" &&
+                        `: ${selectedOrder?.delivery_address?.substring(0, 20)}...`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    <span>Payment Status: {selectedOrder?.payment_status}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span>Current Status:</span>
+                    <Badge variant="outline" className={`${getStatusColor(selectedOrder?.status || "")} capitalize`}>
+                      {selectedOrder?.status}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Order Items</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead className="text-right">Price</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedOrder?.items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.name}</TableCell>
+                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell className="text-right">৳{(item.price * item.quantity).toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Total</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">৳{selectedOrder?.total.toFixed(2)}</div>
+                </CardContent>
+              </Card>
+
+              {/* Only show status update for admin/staff */}
+              {userRole !== "customer" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Update Status</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Tabs defaultValue={selectedOrder?.status || "pending"} className="w-full">
+                      <TabsList>
+                        <TabsTrigger value="pending">Pending</TabsTrigger>
+                        <TabsTrigger value="preparing">Preparing</TabsTrigger>
+                        <TabsTrigger value="ready">Ready</TabsTrigger>
+                        <TabsTrigger value="delivered">Delivered</TabsTrigger>
+                        <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="pending">
+                        <Button
+                          variant="outline"
+                          className="w-full mt-2"
+                          onClick={() => handleStatusUpdate(selectedOrder?.id || "", "pending")}
+                        >
+                          Mark as Pending
+                        </Button>
+                      </TabsContent>
+                      <TabsContent value="preparing">
+                        <Button
+                          variant="outline"
+                          className="w-full mt-2"
+                          onClick={() => handleStatusUpdate(selectedOrder?.id || "", "preparing")}
+                        >
+                          Mark as Preparing
+                        </Button>
+                      </TabsContent>
+                      <TabsContent value="ready">
+                        <Button
+                          variant="outline"
+                          className="w-full mt-2"
+                          onClick={() => handleStatusUpdate(selectedOrder?.id || "", "ready")}
+                        >
+                          Mark as Ready
+                        </Button>
+                      </TabsContent>
+                      <TabsContent value="delivered">
+                        <Button
+                          variant="outline"
+                          className="w-full mt-2"
+                          onClick={() => handleStatusUpdate(selectedOrder?.id || "", "delivered")}
+                        >
+                          Mark as Delivered
+                        </Button>
+                      </TabsContent>
+                      <TabsContent value="cancelled">
+                        <Button
+                          variant="outline"
+                          className="w-full mt-2"
+                          onClick={() => handleStatusUpdate(selectedOrder?.id || "", "cancelled")}
+                        >
+                          Mark as Cancelled
+                        </Button>
+                      </TabsContent>
+                    </Tabs>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+    );
+  }
+
+  // Admin/Staff view - use DashboardLayout
   return (
     <DashboardLayout>
       <div className="p-6">
@@ -402,179 +743,6 @@ const Orders = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Order Details Sheet */}
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-          <SheetContent className="sm:max-w-lg">
-            <SheetHeader>
-              <SheetTitle>Order Details</SheetTitle>
-              <SheetDescription>
-                Details for order {selectedOrder?.id.substring(0, 8).toUpperCase()}
-              </SheetDescription>
-            </SheetHeader>
-            <div className="grid gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Customer Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {selectedOrder?.customer_name ? (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        <span>{selectedOrder.customer_name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <AtSign className="h-4 w-4" />
-                        <span>{selectedOrder.customer_email}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        <span>{selectedOrder.customer_phone}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-4">
-                      <p className="text-gray-500">No customer information available</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Order Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Bookmark className="h-4 w-4" />
-                    <span>Order ID: {selectedOrder?.id.substring(0, 8).toUpperCase()}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>Order Date: {formatDate(selectedOrder?.created_at || "")}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {getDeliveryMethodIcon(selectedOrder?.order_type || "")}
-                    <span className="capitalize">
-                      {selectedOrder?.order_type}
-                      {selectedOrder?.order_type === "delivery" &&
-                        `: ${selectedOrder?.delivery_address?.substring(0, 20)}...`}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    <span>Payment Status: {selectedOrder?.payment_status}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    <span>Current Status:</span>
-                    <Badge variant="outline" className={`${getStatusColor(selectedOrder?.status || "")} capitalize`}>
-                      {selectedOrder?.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Order Items</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Item</TableHead>
-                        <TableHead>Quantity</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedOrder?.items.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>{item.name}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell className="text-right">৳{(item.price * item.quantity).toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Total</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">৳{selectedOrder?.total.toFixed(2)}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Update Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue={selectedOrder?.status || "pending"} className="w-full">
-                    <TabsList>
-                      <TabsTrigger value="pending">Pending</TabsTrigger>
-                      <TabsTrigger value="preparing">Preparing</TabsTrigger>
-                      <TabsTrigger value="ready">Ready</TabsTrigger>
-                      <TabsTrigger value="delivered">Delivered</TabsTrigger>
-                      <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="pending">
-                      <Button
-                        variant="outline"
-                        className="w-full mt-2"
-                        onClick={() => handleStatusUpdate(selectedOrder?.id || "", "pending")}
-                      >
-                        Mark as Pending
-                      </Button>
-                    </TabsContent>
-                    <TabsContent value="preparing">
-                      <Button
-                        variant="outline"
-                        className="w-full mt-2"
-                        onClick={() => handleStatusUpdate(selectedOrder?.id || "", "preparing")}
-                      >
-                        Mark as Preparing
-                      </Button>
-                    </TabsContent>
-                    <TabsContent value="ready">
-                      <Button
-                        variant="outline"
-                        className="w-full mt-2"
-                        onClick={() => handleStatusUpdate(selectedOrder?.id || "", "ready")}
-                      >
-                        Mark as Ready
-                      </Button>
-                    </TabsContent>
-                    <TabsContent value="delivered">
-                      <Button
-                        variant="outline"
-                        className="w-full mt-2"
-                        onClick={() => handleStatusUpdate(selectedOrder?.id || "", "delivered")}
-                      >
-                        Mark as Delivered
-                      </Button>
-                    </TabsContent>
-                    <TabsContent value="cancelled">
-                      <Button
-                        variant="outline"
-                        className="w-full mt-2"
-                        onClick={() => handleStatusUpdate(selectedOrder?.id || "", "cancelled")}
-                      >
-                        Mark as Cancelled
-                      </Button>
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            </div>
-          </SheetContent>
-        </Sheet>
       </div>
     </DashboardLayout>
   );

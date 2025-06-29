@@ -43,6 +43,9 @@ const Header = () => {
                   <Button asChild variant="outline" size="sm">
                     <Link to="/feedback">Feedback</Link>
                   </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/orders">Manage Orders</Link>
+                  </Button>
                 </>
               )}
               
@@ -52,7 +55,7 @@ const Header = () => {
                     <Link to="/customer-dashboard">My Profile</Link>
                   </Button>
                   <Button asChild variant="outline" size="sm">
-                    <Link to="/orders">My Orders</Link>
+                    <Link to="/my-orders">My Orders</Link>
                   </Button>
                 </>
               )}
