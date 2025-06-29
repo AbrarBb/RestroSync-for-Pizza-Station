@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,6 +10,7 @@ import { User, Settings, Upload, Loader2 } from "lucide-react";
 import { profileService } from "@/lib/profileService";
 import { ProfileData } from "@/integrations/supabase/database.types";
 import { Textarea } from "@/components/ui/textarea";
+import { sanitizeInput, sanitizePhone } from "@/lib/inputSanitizer";
 
 const CustomerProfile = () => {
   const { user } = useAuth();
@@ -60,14 +60,33 @@ const CustomerProfile = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    
+    // Sanitize input based on field type
+    let sanitizedValue = value;
+    if (name === 'phone') {
+      sanitizedValue = sanitizePhone(value);
+    } else if (name === 'full_name' || name === 'address' || name === 'preferences') {
+      sanitizedValue = sanitizeInput(value);
+    }
+    
     setProfileData(prev => ({
       ...prev,
-      [name]: value
+      [name]: sanitizedValue
     }));
   };
 
   const handleSave = async () => {
     if (!user) return;
+    
+    // Additional validation
+    if (profileData.full_name && profileData.full_name.length < 2) {
+      toast({
+        title: "Validation Error",
+        description: "Full name must be at least 2 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     const dataToSave = {
       user_id: user.id,
@@ -201,7 +220,8 @@ const CustomerProfile = () => {
                   id="full_name" 
                   name="full_name"
                   value={profileData.full_name || ""} 
-                  onChange={handleChange} 
+                  onChange={handleChange}
+                  maxLength={100}
                 />
               </div>
               
@@ -213,6 +233,7 @@ const CustomerProfile = () => {
                   value={profileData.phone || ""} 
                   onChange={handleChange} 
                   placeholder="+880"
+                  maxLength={20}
                 />
               </div>
               
@@ -224,6 +245,7 @@ const CustomerProfile = () => {
                   value={profileData.address || ""} 
                   onChange={handleChange} 
                   placeholder="House, Road, Area, Dhaka"
+                  maxLength={200}
                 />
               </div>
               
@@ -235,6 +257,7 @@ const CustomerProfile = () => {
                   value={profileData.preferences || ""} 
                   onChange={handleChange} 
                   placeholder="E.g., vegetarian, no onions, spicy food preferred"
+                  maxLength={500}
                 />
               </div>
             </div>

@@ -3,7 +3,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 
 export type UserRole = 'admin' | 'staff' | 'customer';
 
@@ -44,10 +43,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return 'customer';
   };
 
+  const logSecurityEvent = (eventType: string, details: any) => {
+    console.log(`[SECURITY] ${eventType}:`, details);
+    // In a real application, you would send this to your logging service
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
+        
+        // Log authentication events for security monitoring
+        if (event === 'SIGNED_IN') {
+          logSecurityEvent('USER_SIGNED_IN', {
+            user_email: session?.user?.email,
+            timestamp: new Date().toISOString()
+          });
+        } else if (event === 'SIGNED_OUT') {
+          logSecurityEvent('USER_SIGNED_OUT', {
+            timestamp: new Date().toISOString()
+          });
+        }
         
         setSession(session);
         setUser(session?.user ?? null);
@@ -83,12 +99,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      
+      // Basic input validation
+      if (!email || !password) {
+        throw new Error('Email and password are required');
+      }
+      
+      // Email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error('Please enter a valid email address');
+      }
+      
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.toLowerCase().trim(),
         password,
       });
 
       if (error) {
+        logSecurityEvent('FAILED_SIGN_IN_ATTEMPT', {
+          email: email.toLowerCase().trim(),
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
         throw error;
       }
 
@@ -115,10 +148,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, role: string = 'customer') => {
     try {
       setLoading(true);
+      
+      // Enhanced input validation
+      if (!email || !password) {
+        throw new Error('Email and password are required');
+      }
+      
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error('Please enter a valid email address');
+      }
+      
+      if (password.length < 6) {
+        throw new Error('Password must be at least 6 characters long');
+      }
+      
       const redirectUrl = `${window.location.origin}/`;
       
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.toLowerCase().trim(),
         password,
         options: {
           emailRedirectTo: redirectUrl,
@@ -129,8 +177,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
+        logSecurityEvent('FAILED_SIGN_UP_ATTEMPT', {
+          email: email.toLowerCase().trim(),
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
         throw error;
       }
+
+      logSecurityEvent('USER_SIGNED_UP', {
+        email: email.toLowerCase().trim(),
+        role: role,
+        timestamp: new Date().toISOString()
+      });
 
       toast({
         title: "Account created",

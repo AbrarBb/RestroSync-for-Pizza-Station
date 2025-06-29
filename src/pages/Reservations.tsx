@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +12,7 @@ import CustomerInfoForm from "@/components/reservation/CustomerInfoForm";
 import LocationInfo from "@/components/reservation/LocationInfo";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { sanitizeInput, sanitizeEmail, sanitizePhone } from "@/lib/inputSanitizer";
 
 const Reservations = () => {
   const [date, setDate] = useState<Date | undefined>(undefined);
@@ -54,6 +54,37 @@ const Reservations = () => {
   const processReservation = () => {
     setIsSubmitting(true);
     
+    // Sanitize all inputs before processing
+    const sanitizedData = {
+      name: sanitizeInput(name),
+      phone: sanitizePhone(phone),
+      email: sanitizeEmail(email),
+      specialRequests: sanitizeInput(specialRequests)
+    };
+    
+    // Basic validation
+    if (!sanitizedData.name || !sanitizedData.phone || !sanitizedData.email) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields with valid information.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(sanitizedData.email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    
     // Simulate reservation processing
     setTimeout(() => {
       setIsSubmitting(false);
@@ -62,7 +93,7 @@ const Reservations = () => {
         description: `Your table for ${guests} on ${format(date as Date, "MMMM d, yyyy")} at ${time} has been reserved.`,
       });
       
-      // Reset form
+      // Reset form with sanitized values
       setDate(undefined);
       setTime(undefined);
       setGuests("2");
