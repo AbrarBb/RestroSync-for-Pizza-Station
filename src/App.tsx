@@ -43,6 +43,9 @@ function App() {
             <Route path="/menu" element={<Menu />} />
             <Route path="/login" element={<Login />} />
             
+            {/* Public reservation route - anyone can make reservations */}
+            <Route path="/reservations" element={<Reservations />} />
+            
             {/* Customer Routes */}
             <Route path="/customer-dashboard" element={
               <ProtectedRoute allowedRoles={["customer"]}>
@@ -50,9 +53,16 @@ function App() {
               </ProtectedRoute>
             } />
             
-            {/* Orders - accessible by all authenticated users */}
+            {/* Customer Orders - separate from admin orders */}
+            <Route path="/my-orders" element={
+              <ProtectedRoute allowedRoles={["customer"]}>
+                <Orders />
+              </ProtectedRoute>
+            } />
+            
+            {/* Admin/Staff Orders Management */}
             <Route path="/orders" element={
-              <ProtectedRoute allowedRoles={["admin", "staff", "customer"]}>
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
                 <Orders />
               </ProtectedRoute>
             } />
@@ -81,11 +91,6 @@ function App() {
             <Route path="/menu-management" element={
               <ProtectedRoute allowedRoles={["admin", "staff"]}>
                 <MenuManagement />
-              </ProtectedRoute>
-            } />
-            <Route path="/reservations" element={
-              <ProtectedRoute allowedRoles={["admin", "staff"]}>
-                <Reservations />
               </ProtectedRoute>
             } />
             <Route path="/reports" element={

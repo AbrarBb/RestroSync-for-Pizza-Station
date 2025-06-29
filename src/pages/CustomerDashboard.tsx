@@ -90,7 +90,7 @@ const CustomerDashboard = () => {
             </Button>
             
             <Button asChild variant="ghost" size="sm">
-              <Link to="/orders">My Orders</Link>
+              <Link to="/my-orders">My Orders</Link>
             </Button>
             
             <Button 
