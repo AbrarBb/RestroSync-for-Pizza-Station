@@ -102,19 +102,10 @@ export const orderService = {
     }
   },
   
-  // Get order by ID - Enhanced with proper authentication check
+  // Get order by ID - Simplified with better error handling
   getOrderById: async (orderId: string): Promise<Order | null> => {
     try {
       console.log('Fetching order by ID:', orderId);
-      
-      // Get current user to check permissions
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('No authenticated user found');
-        return null;
-      }
-      
-      console.log('User authenticated, fetching order:', user.email);
       
       const { data, error } = await supabase
         .from('orders')
@@ -124,7 +115,16 @@ export const orderService = {
       
       if (error) {
         console.error('Error fetching order:', error);
+        if (error.code === 'PGRST116') {
+          console.log('Order not found');
+          return null;
+        }
         throw error;
+      }
+      
+      if (!data) {
+        console.log('No order data returned');
+        return null;
       }
       
       console.log('Order fetched successfully:', data);
@@ -148,18 +148,10 @@ export const orderService = {
     }
   },
   
-  // Update order status - Enhanced with proper authentication check
+  // Update order status - Simplified
   updateOrderStatus: async (orderId: string, status: Order['status']): Promise<boolean> => {
     try {
       console.log('Updating order status:', { orderId, status });
-      
-      // Get current user to check permissions
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('Authentication required to update order status');
-      }
-      
-      console.log('Authenticated user updating order:', user.email);
       
       const { error } = await supabase
         .from('orders')
@@ -183,24 +175,17 @@ export const orderService = {
       console.error('Error updating order status:', error);
       toast({
         title: "Failed to update status",
-        description: error.message || "You may not have permission to update this order",
+        description: error.message,
         variant: "destructive",
       });
       return false;
     }
   },
   
-  // Get order messages - Enhanced with proper authentication check
+  // Get order messages - Simplified
   getOrderMessages: async (orderId: string): Promise<OrderMessage[]> => {
     try {
       console.log('Fetching order messages for order:', orderId);
-      
-      // Get current user to check permissions
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('No authenticated user found');
-        return [];
-      }
       
       const { data, error } = await supabase
         .from('order_messages')
@@ -222,16 +207,10 @@ export const orderService = {
     }
   },
   
-  // Send order message - Enhanced with proper authentication check
+  // Send order message - Simplified
   sendOrderMessage: async (message: Omit<OrderMessage, 'id' | 'created_at'>): Promise<boolean> => {
     try {
       console.log('Sending order message:', message);
-      
-      // Get current user to check permissions
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('Authentication required to send message');
-      }
       
       const { error } = await supabase
         .from('order_messages')
@@ -353,19 +332,10 @@ export const orderService = {
     }
   },
 
-  // Get all orders for admin/staff - Enhanced with proper authentication check
+  // Get all orders for admin/staff - Simplified
   getAllOrders: async (): Promise<Order[]> => {
     try {
       console.log('Fetching all orders for admin/staff');
-      
-      // Get current user to check permissions
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('No authenticated user found');
-        return [];
-      }
-      
-      console.log('User authenticated, fetching all orders:', user.email);
       
       const { data, error } = await supabase
         .from('orders')

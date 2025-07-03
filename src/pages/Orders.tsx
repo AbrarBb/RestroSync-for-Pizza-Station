@@ -53,6 +53,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { orderService } from "@/lib/orderService";
 import Header from "@/components/layout/Header";
 import { Link } from "react-router-dom";
+import OrderDetailsManagement from "@/components/admin/OrderDetailsManagement";
 
 const Orders = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -63,6 +64,8 @@ const Orders = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [showDetailedView, setShowDetailedView] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, userRole, signOut } = useAuth();
@@ -70,6 +73,11 @@ const Orders = () => {
   const toggleSheet = (order: Order | null) => {
     setSelectedOrder(order);
     setIsSheetOpen(!isSheetOpen);
+  };
+
+  const handleViewDetailed = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setShowDetailedView(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -124,12 +132,10 @@ const Orders = () => {
 
   const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
     try {
-      await ordersService.updateStatus(orderId, newStatus);
-      toast({
-        title: "Order Updated",
-        description: `Order status updated to ${newStatus}.`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      const success = await orderService.updateOrderStatus(orderId, newStatus);
+      if (success) {
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -167,7 +173,7 @@ const Orders = () => {
     }));
   };
 
-  // Use different query based on user role
+  // Use different query based on user role - Updated to use orderService
   const { data: allOrders = [], isLoading } = useQuery({
     queryKey: ["orders", userRole, user?.id],
     queryFn: async () => {
@@ -177,7 +183,7 @@ const Orders = () => {
         return processOrders(data);
       } else {
         // Admin/staff see all orders
-        const data = await ordersService.getAll();
+        const data = await orderService.getAllOrders();
         return processOrders(data);
       }
     },
@@ -223,6 +229,29 @@ const Orders = () => {
           <p className="ml-2 text-muted-foreground">Loading orders...</p>
         </div>
       </div>
+    );
+  }
+
+  // Show detailed order view for admin/staff
+  if (showDetailedView && selectedOrderId && userRole !== "customer") {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDetailedView(false);
+                setSelectedOrderId(null);
+              }}
+            >
+              ← Back to Orders
+            </Button>
+            <h1 className="text-2xl font-bold">Order Details</h1>
+          </div>
+          <OrderDetailsManagement orderId={selectedOrderId} />
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -731,10 +760,15 @@ const Orders = () => {
                       <TableCell>{formatDate(order.created_at)}</TableCell>
                       <TableCell className="text-right">৳{order.total.toFixed(2)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => toggleSheet(order)}>
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button variant="outline" size="sm" onClick={() => toggleSheet(order)}>
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button variant="default" size="sm" onClick={() => handleViewDetailed(order.id)}>
+                            Details
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
