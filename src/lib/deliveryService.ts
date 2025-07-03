@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { safeQuery, safeCast } from "./supabaseHelper";
@@ -236,7 +237,7 @@ export const deliveryService = {
         
         if (fetchError) {
           console.error('Error fetching assignment:', fetchError);
-        } else if (assignment) {
+        } else if (assignment && assignment.order_id) {
           const { error: orderError } = await supabase
             .from('orders')
             .update({ status: 'delivered' })
