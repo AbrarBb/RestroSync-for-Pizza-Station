@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { orderService } from "@/lib/orderService";
+import { deliveryService } from "@/lib/deliveryService";
 import { useAuth } from "@/contexts/AuthContext";
 import { OrderMessage, DeliveryAssignment } from "@/integrations/supabase/database.types";
 import { Order, transformOrderItems } from "@/lib/supabase";

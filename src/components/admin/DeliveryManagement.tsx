@@ -180,7 +180,7 @@ const DeliveryManagement = () => {
                 <p className="text-sm text-muted-foreground">Active Deliveries</p>
                 <p className="text-2xl font-bold">
                   {deliveryOrders.filter(order => 
-                    order.status === 'delivering' || order.status === 'ready'
+                    ['delivering', 'ready', 'preparing'].includes(order.status)
                   ).length}
                 </p>
               </div>

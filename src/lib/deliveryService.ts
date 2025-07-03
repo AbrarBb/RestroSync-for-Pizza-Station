@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { safeQuery, safeCast } from "./supabaseHelper";
@@ -230,12 +229,14 @@ export const deliveryService = {
       
       // If delivered, also update the order status
       if (status === 'delivered') {
-        const { data: assignment } = await safeQuery('delivery_assignments')
+        const { data: assignment, error: fetchError } = await safeQuery('delivery_assignments')
           .select('order_id')
           .eq('id', assignmentId)
           .single();
         
-        if (assignment) {
+        if (fetchError) {
+          console.error('Error fetching assignment:', fetchError);
+        } else if (assignment) {
           const { error: orderError } = await supabase
             .from('orders')
             .update({ status: 'delivered' })
