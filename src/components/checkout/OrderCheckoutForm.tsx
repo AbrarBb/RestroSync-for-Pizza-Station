@@ -32,7 +32,7 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
     address: user?.user_metadata?.address || "",
     paymentMethod: "bkash",
     specialRequests: "",
-    orderType: "delivery" // Default to delivery
+    orderType: "" // Don't default to delivery - let user choose
   });
   const [loading, setLoading] = useState(false);
   
@@ -48,6 +48,15 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
       toast({
         title: "Missing information",
         description: "Please fill all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!formData.orderType) {
+      toast({
+        title: "Order type required",
+        description: "Please select an order type (delivery or dine-in)",
         variant: "destructive"
       });
       return;
@@ -157,9 +166,8 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-2">
-            <Label>Order Type</Label>
+            <Label>Order Type *</Label>
             <RadioGroup
-              defaultValue="delivery"
               value={formData.orderType}
               onValueChange={(value) => setFormData(prev => ({ ...prev, orderType: value }))}
               className="flex gap-4"
@@ -177,7 +185,7 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
           
           {formData.orderType === "delivery" && (
             <div className="grid gap-2">
-              <Label htmlFor="address">Delivery Address</Label>
+              <Label htmlFor="address">Delivery Address *</Label>
               <Textarea
                 id="address"
                 name="address"

@@ -3,6 +3,7 @@ import { toast } from "@/hooks/use-toast";
 import { Order, transformOrderItems } from "@/lib/supabase";
 import { OrderMessage, DeliveryAssignment } from "@/integrations/supabase/database.types";
 import { safeQuery, safeCast } from "./supabaseHelper";
+import { validateAndSanitizeOrderData } from "./inputSanitizer";
 
 export const orderService = {
   // Create a new order
@@ -10,21 +11,24 @@ export const orderService = {
     try {
       console.log('Creating new order:', orderData);
       
+      // Sanitize order data
+      const sanitizedData = validateAndSanitizeOrderData(orderData);
+      
       // Ensure we have all required fields and correct order_type values
       const completeOrderData = {
         id: crypto.randomUUID(),
-        customer_name: orderData.customer_name,
-        customer_email: orderData.customer_email,
-        customer_phone: orderData.customer_phone,
-        customer_id: orderData.customer_id || null,
-        delivery_address: orderData.delivery_address || null,
-        order_type: orderData.order_type || 'delivery', // Ensure valid order type
-        items: orderData.items,
-        total: orderData.total,
-        payment_method: orderData.payment_method,
-        payment_status: orderData.payment_status || 'pending',
-        status: orderData.status || 'pending',
-        special_requests: orderData.special_requests || null,
+        customer_name: sanitizedData.customer_name,
+        customer_email: sanitizedData.customer_email,
+        customer_phone: sanitizedData.customer_phone,
+        customer_id: sanitizedData.customer_id || null,
+        delivery_address: sanitizedData.delivery_address || null,
+        order_type: sanitizedData.order_type || 'delivery', // Ensure valid order type
+        items: sanitizedData.items,
+        total: sanitizedData.total,
+        payment_method: sanitizedData.payment_method,
+        payment_status: sanitizedData.payment_status || 'pending',
+        status: sanitizedData.status || 'pending',
+        special_requests: sanitizedData.special_requests || null,
         created_at: new Date().toISOString()
       };
 
@@ -123,15 +127,26 @@ export const orderService = {
     }
   },
   
-  // Update order status
+  // Update order status - Enhanced with proper authentication check
   updateOrderStatus: async (orderId: string, status: Order['status']): Promise<boolean> => {
     try {
+      console.log('Updating order status:', { orderId, status });
+      
+      // Get current user to check permissions
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Authentication required to update order status');
+      }
+      
       const { error } = await supabase
         .from('orders')
         .update({ status })
         .eq('id', orderId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error updating order status:', error);
+        throw error;
+      }
       
       toast({
         title: "Order status updated",
@@ -143,7 +158,7 @@ export const orderService = {
       console.error('Error updating order status:', error);
       toast({
         title: "Failed to update status",
-        description: error.message,
+        description: error.message || "You may not have permission to update this order",
         variant: "destructive",
       });
       return false;
