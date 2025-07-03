@@ -102,16 +102,32 @@ export const orderService = {
     }
   },
   
-  // Get order by ID
+  // Get order by ID - Enhanced with proper authentication check
   getOrderById: async (orderId: string): Promise<Order | null> => {
     try {
+      console.log('Fetching order by ID:', orderId);
+      
+      // Get current user to check permissions
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No authenticated user found');
+        return null;
+      }
+      
+      console.log('User authenticated, fetching order:', user.email);
+      
       const { data, error } = await supabase
         .from('orders')
         .select('*')
         .eq('id', orderId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching order:', error);
+        throw error;
+      }
+      
+      console.log('Order fetched successfully:', data);
       
       // Transform to properly typed order
       return {
@@ -123,6 +139,11 @@ export const orderService = {
       };
     } catch (error: any) {
       console.error('Error fetching order details:', error);
+      toast({
+        title: "Failed to load order",
+        description: error.message,
+        variant: "destructive",
+      });
       return null;
     }
   },
@@ -138,6 +159,8 @@ export const orderService = {
         throw new Error('Authentication required to update order status');
       }
       
+      console.log('Authenticated user updating order:', user.email);
+      
       const { error } = await supabase
         .from('orders')
         .update({ status })
@@ -147,6 +170,8 @@ export const orderService = {
         console.error('Supabase error updating order status:', error);
         throw error;
       }
+      
+      console.log('Order status updated successfully');
       
       toast({
         title: "Order status updated",
@@ -165,15 +190,30 @@ export const orderService = {
     }
   },
   
-  // Get order messages
+  // Get order messages - Enhanced with proper authentication check
   getOrderMessages: async (orderId: string): Promise<OrderMessage[]> => {
     try {
-      const { data, error } = await safeQuery('order_messages')
+      console.log('Fetching order messages for order:', orderId);
+      
+      // Get current user to check permissions
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No authenticated user found');
+        return [];
+      }
+      
+      const { data, error } = await supabase
+        .from('order_messages')
         .select('*')
         .eq('order_id', orderId)
         .order('created_at', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching order messages:', error);
+        throw error;
+      }
+      
+      console.log('Order messages fetched:', data?.length || 0);
       
       return safeCast<OrderMessage[]>(data || []);
     } catch (error: any) {
@@ -182,14 +222,27 @@ export const orderService = {
     }
   },
   
-  // Send order message
+  // Send order message - Enhanced with proper authentication check
   sendOrderMessage: async (message: Omit<OrderMessage, 'id' | 'created_at'>): Promise<boolean> => {
     try {
       console.log('Sending order message:', message);
-      const { error } = await safeQuery('order_messages')
+      
+      // Get current user to check permissions
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Authentication required to send message');
+      }
+      
+      const { error } = await supabase
+        .from('order_messages')
         .insert([message as any]);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error sending order message:', error);
+        throw error;
+      }
+      
+      console.log('Order message sent successfully');
       
       return true;
     } catch (error: any) {
@@ -300,15 +353,31 @@ export const orderService = {
     }
   },
 
-  // Get all orders for admin/staff
+  // Get all orders for admin/staff - Enhanced with proper authentication check
   getAllOrders: async (): Promise<Order[]> => {
     try {
+      console.log('Fetching all orders for admin/staff');
+      
+      // Get current user to check permissions
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No authenticated user found');
+        return [];
+      }
+      
+      console.log('User authenticated, fetching all orders:', user.email);
+      
       const { data, error } = await supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching all orders:', error);
+        throw error;
+      }
+      
+      console.log('Orders fetched successfully:', data?.length || 0);
       
       return data?.map(order => ({
         ...order,

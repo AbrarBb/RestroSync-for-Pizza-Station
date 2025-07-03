@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,28 +51,35 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
     try {
       setLoading(true);
       
+      console.log('Fetching order data for ID:', orderId);
+      console.log('Current user:', user?.email, 'Role:', userRole);
+      
       // Fetch order
       const orderData = await orderService.getOrderById(orderId);
       
       if (!orderData) {
+        console.error('No order data returned');
         toast({
           title: "Order not found",
-          description: "Unable to retrieve order details",
+          description: "Unable to retrieve order details. Please check if you have permission to view this order.",
           variant: "destructive"
         });
         setLoading(false);
         return;
       }
       
+      console.log('Order data fetched successfully:', orderData);
       setOrder(orderData);
       
       // Fetch messages
       const orderMessages = await orderService.getOrderMessages(orderId);
+      console.log('Order messages fetched:', orderMessages.length);
       setMessages(orderMessages);
       
       // Fetch delivery status if applicable
       if (orderData.order_type === 'delivery') {
         const assignment = await orderService.getDeliveryAssignment(orderId);
+        console.log('Delivery assignment:', assignment);
         setDeliveryStatus(assignment);
         
         // Fetch drivers (in real app, would fetch from database)
@@ -89,7 +95,7 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
       console.error("Error fetching order data:", error);
       toast({
         title: "Error loading order",
-        description: "Failed to load order details. Please try again.",
+        description: "Failed to load order details. Please try again or check your permissions.",
         variant: "destructive"
       });
     } finally {
@@ -98,6 +104,13 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
   };
   
   useEffect(() => {
+    console.log('OrderDetailsManagement mounted with:', { orderId, user: user?.email, userRole });
+    
+    if (!user || !userRole) {
+      console.log('User not authenticated, waiting...');
+      return;
+    }
+    
     fetchOrderData();
     
     // Set up real-time subscription for messages
@@ -153,7 +166,7 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
       supabase.removeChannel(orderChannel);
       supabase.removeChannel(deliveryChannel);
     };
-  }, [orderId]);
+  }, [orderId, user, userRole]);
   
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !user || !userRole || !orderId) return;
@@ -174,11 +187,14 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
   const handleUpdateOrderStatus = async (status: string) => {
     if (!order) return;
     
+    console.log('Updating order status to:', status);
+    
     try {
       // Use orderService to update status
       const success = await orderService.updateOrderStatus(order.id, status as Order['status']);
       
       if (success) {
+        console.log('Order status updated successfully');
         setOrder(prev => prev ? { ...prev, status: status as Order['status'] } : null);
       }
     } catch (error: any) {
@@ -221,6 +237,7 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
     return (
       <div className="flex justify-center items-center py-10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2 text-muted-foreground">Loading order details...</p>
       </div>
     );
   }
@@ -228,7 +245,9 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
   if (!order) {
     return (
       <div className="text-center py-10">
-        <p>Order not found</p>
+        <p className="text-muted-foreground mb-4">
+          {user && userRole ? "Order not found or you don't have permission to view it" : "Please sign in to view order details"}
+        </p>
         <Button 
           variant="outline" 
           className="mt-4" 
