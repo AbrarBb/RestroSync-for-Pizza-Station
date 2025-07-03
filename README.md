@@ -2,7 +2,9 @@
 
 - **Project Name**: RestroSync for Pizza Station  
 - **Description**: A restaurant management web app that handles pizza orders, menu updates, user accounts, and dashboard analytics for Pizza Station.
-- **Live URL**: https://restrosync.lovable.app  
+- **Live URL**: https://restrosync.lovable.app
+- [Software Requirements Specification (SRS) Document](https://docs.google.com/document/d/1qUfPX_OE1OkHJ5yfROkL3wDWTnsqM2C6RpMZ_Xft4eY/edit?usp=sharing)  
+  Comprehensive documentation of project scope, features, and requirements.  
 - **Repository**: https://github.com/AbrarBb/RestroSync-for-Pizza-Station
 
 ## Tech Stack
