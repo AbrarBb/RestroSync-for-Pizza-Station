@@ -29,11 +29,19 @@ export interface DeliveryUpdate {
   notes?: string;
 }
 
+export interface DeliveryMetrics {
+  totalDeliveries: number;
+  activeDeliveries: number;
+  completedToday: number;
+  averageDeliveryTime: number;
+  onTimeDeliveryRate: number;
+}
+
 export const deliveryService = {
   // Get available drivers
   getAvailableDrivers: async (): Promise<DeliveryDriver[]> => {
     try {
-      // Mock data - would be replaced with actual DB call
+      // Enhanced mock data with more realistic information
       return [
         {
           id: 'driver-1',
@@ -70,6 +78,30 @@ export const deliveryService = {
             lat: 23.8125,
             lng: 90.4148
           }
+        },
+        {
+          id: 'driver-4',
+          name: 'Saidul Islam',
+          phone: '+880123456786',
+          status: 'delivering',
+          rating: 4.7,
+          vehicle_type: 'motorcycle',
+          current_location: {
+            lat: 23.8090,
+            lng: 90.4200
+          }
+        },
+        {
+          id: 'driver-5',
+          name: 'Jamal Hossain',
+          phone: '+880123456785',
+          status: 'offline',
+          rating: 4.5,
+          vehicle_type: 'car',
+          current_location: {
+            lat: 23.8150,
+            lng: 90.4100
+          }
         }
       ];
     } catch (error: any) {
@@ -81,12 +113,18 @@ export const deliveryService = {
   // Assign delivery
   assignDelivery: async (orderId: string, driverId: string): Promise<boolean> => {
     try {
-      // Get driver info (would be from real DB in production)
+      console.log('Assigning delivery:', { orderId, driverId });
+      
+      // Get driver info
       const drivers = await deliveryService.getAvailableDrivers();
       const driver = drivers.find(d => d.id === driverId);
       
       if (!driver) {
         throw new Error('Driver not found');
+      }
+      
+      if (driver.status !== 'available') {
+        throw new Error('Driver is not available');
       }
       
       // Create assignment
@@ -115,8 +153,8 @@ export const deliveryService = {
       if (orderError) throw orderError;
       
       toast({
-        title: "Driver assigned",
-        description: `${driver.name} has been assigned to this order.`,
+        title: "Driver assigned successfully",
+        description: `${driver.name} has been assigned to this delivery.`,
       });
       
       return true;
@@ -135,28 +173,32 @@ export const deliveryService = {
   getDeliveryUpdates: async (assignmentId: string): Promise<DeliveryUpdate[]> => {
     try {
       // Mock data - would be replaced with actual DB call
-      return [
+      const mockUpdates = [
         {
           id: 'update-1',
           assignment_id: assignmentId,
-          status: 'picked_up',
+          status: 'picked_up' as const,
           timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
           location: {
             lat: 23.8103,
             lng: 90.4125
-          }
+          },
+          notes: 'Order picked up from restaurant'
         },
         {
           id: 'update-2',
           assignment_id: assignmentId,
-          status: 'in_transit',
+          status: 'in_transit' as const,
           timestamp: new Date(Date.now() - 15 * 60000).toISOString(),
           location: {
             lat: 23.7990,
             lng: 90.4200
-          }
+          },
+          notes: 'En route to delivery address'
         }
       ];
+      
+      return mockUpdates;
     } catch (error: any) {
       console.error('Error fetching delivery updates:', error);
       return [];
@@ -171,30 +213,41 @@ export const deliveryService = {
     notes?: string
   ): Promise<boolean> => {
     try {
-      // In real implementation, this would:
-      // 1. Update delivery_assignments table status
-      // 2. Insert a new record in delivery_updates table
-      // 3. Update the order status if delivered
-      
       console.log(`Updating delivery ${assignmentId} status to ${status}`);
       
-      // If delivered, update the delivered_at timestamp
+      // Update delivery_assignments table
+      const updates: any = { status };
+      
       if (status === 'delivered') {
-        const { error } = await safeQuery('delivery_assignments')
-          .update({
-            status: 'delivered',
-            delivered_at: new Date().toISOString()
-          } as any)
-          .eq('id', assignmentId);
+        updates.delivered_at = new Date().toISOString();
+      }
+      
+      const { error } = await safeQuery('delivery_assignments')
+        .update(updates)
+        .eq('id', assignmentId);
+      
+      if (error) throw error;
+      
+      // If delivered, also update the order status
+      if (status === 'delivered') {
+        const { data: assignment } = await safeQuery('delivery_assignments')
+          .select('order_id')
+          .eq('id', assignmentId)
+          .single();
         
-        if (error) throw error;
-        
-        // We would also update the orders table in a real implementation
+        if (assignment) {
+          const { error: orderError } = await supabase
+            .from('orders')
+            .update({ status: 'delivered' })
+            .eq('id', assignment.order_id);
+          
+          if (orderError) console.error('Error updating order status:', orderError);
+        }
       }
       
       toast({
         title: "Delivery status updated",
-        description: `Status updated to ${status}`,
+        description: `Status updated to ${status.replace('_', ' ')}`,
       });
       
       return true;
@@ -212,11 +265,11 @@ export const deliveryService = {
   // Get current driver location
   getDriverLocation: async (driverId: string): Promise<{ lat: number; lng: number } | null> => {
     try {
-      // Mock location data - would be replaced with real-time data
-      return {
-        lat: 23.7940,
-        lng: 90.4043
-      };
+      // In a real app, this would fetch real-time location data
+      const drivers = await deliveryService.getAvailableDrivers();
+      const driver = drivers.find(d => d.id === driverId);
+      
+      return driver?.current_location || null;
     } catch (error: any) {
       console.error('Error fetching driver location:', error);
       return null;
@@ -245,6 +298,74 @@ export const deliveryService = {
       console.error('Error confirming delivery:', error);
       toast({
         title: "Failed to confirm delivery",
+        description: error.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  },
+  
+  // Get delivery metrics
+  getDeliveryMetrics: async (): Promise<DeliveryMetrics> => {
+    try {
+      // In a real app, this would calculate from actual data
+      return {
+        totalDeliveries: 150,
+        activeDeliveries: 12,
+        completedToday: 25,
+        averageDeliveryTime: 28, // minutes
+        onTimeDeliveryRate: 92.5 // percentage
+      };
+    } catch (error: any) {
+      console.error('Error fetching delivery metrics:', error);
+      return {
+        totalDeliveries: 0,
+        activeDeliveries: 0,
+        completedToday: 0,
+        averageDeliveryTime: 0,
+        onTimeDeliveryRate: 0
+      };
+    }
+  },
+  
+  // Get delivery history
+  getDeliveryHistory: async (driverId?: string): Promise<DeliveryAssignment[]> => {
+    try {
+      let query = safeQuery('delivery_assignments')
+        .select('*')
+        .order('assigned_at', { ascending: false });
+      
+      if (driverId) {
+        query = query.eq('driver_id', driverId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      return safeCast<DeliveryAssignment[]>(data || []);
+    } catch (error: any) {
+      console.error('Error fetching delivery history:', error);
+      return [];
+    }
+  },
+  
+  // Update driver status
+  updateDriverStatus: async (driverId: string, status: DeliveryDriver['status']): Promise<boolean> => {
+    try {
+      // In a real app, this would update the drivers table
+      console.log(`Updating driver ${driverId} status to ${status}`);
+      
+      toast({
+        title: "Driver status updated",
+        description: `Driver status changed to ${status}`,
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error updating driver status:', error);
+      toast({
+        title: "Failed to update driver status",
         description: error.message,
         variant: "destructive",
       });

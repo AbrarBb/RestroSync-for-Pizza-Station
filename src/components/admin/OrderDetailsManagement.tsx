@@ -206,24 +206,18 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
       });
     }
   };
-  
+
   const handleAssignDriver = async () => {
     if (!order || !selectedDriver) return;
     
     const driver = drivers.find(d => d.id === selectedDriver);
     if (!driver) return;
     
-    const assignment = {
-      order_id: order.id,
-      driver_id: driver.id,
-      driver_name: driver.name,
-      status: 'assigned' as DeliveryAssignment['status']
-    };
-    
-    const success = await orderService.assignDeliveryDriver(assignment);
+    const success = await deliveryService.assignDelivery(order.id, driver.id);
     if (success) {
       // Refresh to get the updated delivery assignment
       fetchOrderData();
+      setSelectedDriver("");
     }
   };
   
@@ -398,40 +392,86 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
             <>
               <Separator />
               <div>
-                <h3 className="font-medium mb-3">Delivery Management</h3>
+                <h3 className="font-medium mb-3 flex items-center gap-2">
+                  <Truck className="h-4 w-4" />
+                  Enhanced Delivery Management
+                </h3>
                 
                 {deliveryStatus ? (
-                  <div className="space-y-2">
-                    <p className="flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Driver:</span> {deliveryStatus.driver_name}
-                    </p>
-                    <p>
-                      <span className="font-medium">Status:</span>{" "}
-                      <Badge className="capitalize">{deliveryStatus.status}</Badge>
-                    </p>
-                    {deliveryStatus.delivered_at && (
-                      <p>
-                        <span className="font-medium">Delivered at:</span> {formatDate(deliveryStatus.delivered_at)}
-                      </p>
-                    )}
+                  <div className="space-y-4">
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="flex items-center gap-2 mb-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">Driver:</span> {deliveryStatus.driver_name}
+                          </p>
+                          <p className="flex items-center gap-2 mb-2">
+                            <Badge className="capitalize">{deliveryStatus.status}</Badge>
+                            <span className="text-sm text-muted-foreground">
+                              Assigned: {formatDate(deliveryStatus.assigned_at)}
+                            </span>
+                          </p>
+                          {deliveryStatus.delivered_at && (
+                            <p className="text-sm text-muted-foreground">
+                              Delivered: {formatDate(deliveryStatus.delivered_at)}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Delivery Progress:</p>
+                          <div className="space-y-1">
+                            <div className={`text-xs p-2 rounded ${
+                              deliveryStatus.status === 'assigned' || deliveryStatus.status === 'picked_up' || deliveryStatus.status === 'delivered' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              ✓ Order Assigned
+                            </div>
+                            <div className={`text-xs p-2 rounded ${
+                              deliveryStatus.status === 'picked_up' || deliveryStatus.status === 'delivered' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {deliveryStatus.status === 'picked_up' || deliveryStatus.status === 'delivered' ? '✓' : '○'} Order Picked Up
+                            </div>
+                            <div className={`text-xs p-2 rounded ${
+                              deliveryStatus.status === 'delivered' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {deliveryStatus.status === 'delivered' ? '✓' : '○'} Order Delivered
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     
-                    {/* Update delivery status buttons */}
+                    {/* Enhanced delivery status buttons */}
                     {deliveryStatus.status !== 'delivered' && (
-                      <div className="mt-2">
-                        <h4 className="font-medium mb-2">Update Delivery Status:</h4>
-                        <div className="flex gap-2">
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Update Delivery Status:</h4>
+                        <div className="flex flex-wrap gap-2">
                           {deliveryStatus.status === 'assigned' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => orderService.updateDeliveryStatus(orderId, 'picked_up')}
-                            >
-                              Mark as Picked Up
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => orderService.updateDeliveryStatus(orderId, 'picked_up')}
+                              >
+                                Mark as Picked Up
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => orderService.updateDeliveryStatus(orderId, 'delivered')}
+                              >
+                                Mark as Delivered
+                              </Button>
+                            </>
                           )}
                           
-                          {(deliveryStatus.status === 'assigned' || deliveryStatus.status === 'picked_up') && (
+                          {deliveryStatus.status === 'picked_up' && (
                             <Button
                               size="sm"
                               onClick={() => orderService.updateDeliveryStatus(orderId, 'delivered')}
@@ -444,32 +484,49 @@ const OrderDetailsManagement = ({ orderId }: OrderDetailsManagementProps) => {
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-2 items-end">
-                    <div className="col-span-2">
-                      <Label htmlFor="driver" className="mb-2 block">Select Driver</Label>
-                      <Select
-                        value={selectedDriver}
-                        onValueChange={setSelectedDriver}
-                      >
-                        <SelectTrigger id="driver">
-                          <SelectValue placeholder="Select a driver" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {drivers.map(driver => (
-                            <SelectItem key={driver.id} value={driver.id}>
-                              {driver.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  <div className="space-y-4">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <p className="text-sm text-yellow-800 mb-3">
+                        This delivery order needs a driver assignment.
+                      </p>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <Label htmlFor="driver" className="text-sm font-medium">
+                            Select Available Driver
+                          </Label>
+                          <Select
+                            value={selectedDriver}
+                            onValueChange={setSelectedDriver}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="Choose a driver for this delivery" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {drivers.map(driver => (
+                                <SelectItem key={driver.id} value={driver.id}>
+                                  <div className="flex items-center gap-2">
+                                    <span>{driver.name}</span>
+                                    <Badge variant="outline" className="text-xs">
+                                      Available
+                                    </Badge>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <Button
+                          onClick={handleAssignDriver}
+                          disabled={!selectedDriver}
+                          className="w-full"
+                        >
+                          <Truck className="h-4 w-4 mr-2" />
+                          Assign Driver to Delivery
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      onClick={handleAssignDriver}
-                      disabled={!selectedDriver}
-                      className="h-10"
-                    >
-                      Assign Driver
-                    </Button>
                   </div>
                 )}
               </div>
