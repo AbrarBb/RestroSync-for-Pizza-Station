@@ -17,7 +17,6 @@
 | Hosting     | Lovable (Frontend), Supabase (Backend)            |
 
 
-
 ## Folder Structure
 
 ```text
@@ -165,3 +164,5 @@ Future Improvements
 *   Enable offline mode using local storage
 
 
+SQA Analysis List:
+-------------------
