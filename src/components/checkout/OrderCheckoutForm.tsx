@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import nagadLogo from "@/assets/nagad-logo.png";
 
 type OrderItem = {
   id: string;
@@ -260,9 +261,7 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
             <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
               <RadioGroupItem value="nagad" id="nagad" />
               <Label htmlFor="nagad" className="flex items-center cursor-pointer">
-                <span className="inline-flex items-center justify-center w-10 h-6 rounded bg-orange-500 text-white text-xs font-bold mr-2">
-                  নগদ
-                </span>
+                <img src={nagadLogo} alt="Nagad" className="h-6 w-auto mr-2" />
                 Nagad Mobile Banking
               </Label>
             </div>
