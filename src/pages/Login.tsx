@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,19 +8,16 @@ import { Loader2, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
-  const [userType, setUserType] = useState("staff");
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, userRole } = useAuth();
   const navigate = useNavigate();
 
-  // Default credentials for easy access
+  // Default credentials for easy access (staff only)
   const defaultCredentials = {
     admin: {
       email: "admin@pizzastation.com",
@@ -37,15 +33,18 @@ const Login = () => {
   const fillDefaultCredentials = (type: "admin" | "staff") => {
     setEmail(defaultCredentials[type].email);
     setPassword(defaultCredentials[type].password);
-    setUserType(type);
   };
 
-  // Redirect to dashboard if already logged in
+  // Redirect based on role after login
   useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
+    if (user && userRole) {
+      if (userRole === "admin" || userRole === "staff") {
+        navigate("/dashboard");
+      } else {
+        navigate("/"); // Customers go to home page
+      }
     }
-  }, [user, navigate]);
+  }, [user, userRole, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +60,6 @@ const Login = () => {
     setIsLoading(true);
     try {
       await signIn(email, password);
-      // Role will be determined in AuthContext based on email
     } catch (error) {
       console.error("Sign in error:", error);
     } finally {
@@ -82,8 +80,7 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      // Pass the selected role during signup
-      await signUp(email, password, userType as any);
+      await signUp(email, password, "customer"); // Always signup as customer
       setActiveTab("signin");
       toast({
         title: "Account created",
@@ -223,25 +220,6 @@ const Login = () => {
                       required
                     />
                   </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">User Type</label>
-                    <RadioGroup value={userType} onValueChange={setUserType} className="flex gap-4">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="staff" id="staff" />
-                        <Label htmlFor="staff">Staff</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="admin" id="admin" />
-                        <Label htmlFor="admin">Admin</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="customer" id="customer" />
-                        <Label htmlFor="customer">Customer</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                  
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
                       <>
