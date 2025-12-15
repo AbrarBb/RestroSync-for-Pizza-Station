@@ -216,7 +216,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(null);
       setUserRole(null);
       
-      const { error } = await supabase.auth.signOut();
+      // Sign out from all sessions (global scope)
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
       
       // Ignore "session_not_found" errors - the user is already signed out
       if (error && !error.message?.includes('session_not_found')) {
@@ -227,9 +228,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Signed out",
         description: "You have been signed out successfully.",
       });
-      
-      // Redirect to home page after successful signout
-      window.location.href = '/';
     } catch (error: any) {
       console.error('Sign out error:', error);
       // Still show success since we cleared local state
@@ -237,7 +235,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Signed out",
         description: "You have been signed out successfully.",
       });
-      window.location.href = '/';
     } finally {
       setLoading(false);
     }
