@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
 type OrderItem = {
@@ -26,15 +26,40 @@ interface OrderCheckoutFormProps {
 const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutFormProps) => {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
-    name: user?.user_metadata?.full_name || "",
+    name: "",
     email: user?.email || "",
-    phone: user?.user_metadata?.phone || "",
-    address: user?.user_metadata?.address || "",
+    phone: "",
+    address: "",
     paymentMethod: "bkash",
     specialRequests: "",
-    orderType: "" // Don't default to delivery - let user choose
+    orderType: ""
   });
   const [loading, setLoading] = useState(false);
+
+  // Fetch profile data when user is logged in
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?.id) return;
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, phone, address')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (profile) {
+        setFormData(prev => ({
+          ...prev,
+          name: profile.full_name || prev.name,
+          email: user.email || prev.email,
+          phone: profile.phone || prev.phone,
+          address: profile.address || prev.address,
+        }));
+      }
+    };
+    
+    fetchProfile();
+  }, [user]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
