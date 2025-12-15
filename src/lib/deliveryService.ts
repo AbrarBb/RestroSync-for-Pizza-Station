@@ -230,14 +230,15 @@ export const deliveryService = {
       
       // If delivered, also update the order status
       if (status === 'delivered') {
-        const { data: assignment, error: fetchError } = await safeQuery('delivery_assignments')
+        const { data: assignment, error: fetchError } = await supabase
+          .from('delivery_assignments')
           .select('order_id')
           .eq('id', assignmentId)
           .single();
         
         if (fetchError) {
           console.error('Error fetching assignment:', fetchError);
-        } else if (assignment && assignment.order_id) {
+        } else if (assignment?.order_id) {
           const { error: orderError } = await supabase
             .from('orders')
             .update({ status: 'delivered' })

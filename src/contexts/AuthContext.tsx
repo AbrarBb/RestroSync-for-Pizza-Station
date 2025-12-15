@@ -211,16 +211,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signOut();
       
-      if (error) {
-        throw error;
-      }
-
-      // Clear state immediately
+      // Clear state first to ensure UI updates even if API call fails
       setUser(null);
       setSession(null);
       setUserRole(null);
+      
+      const { error } = await supabase.auth.signOut();
+      
+      // Ignore "session_not_found" errors - the user is already signed out
+      if (error && !error.message?.includes('session_not_found')) {
+        console.error('Sign out error:', error);
+      }
       
       toast({
         title: "Signed out",
@@ -231,11 +233,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.location.href = '/';
     } catch (error: any) {
       console.error('Sign out error:', error);
+      // Still show success since we cleared local state
       toast({
-        title: "Sign out failed",
-        description: error.message || "Failed to sign out. Please try again.",
-        variant: "destructive",
+        title: "Signed out",
+        description: "You have been signed out successfully.",
       });
+      window.location.href = '/';
     } finally {
       setLoading(false);
     }
