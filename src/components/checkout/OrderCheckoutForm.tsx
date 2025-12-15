@@ -245,54 +245,54 @@ const OrderCheckoutForm = ({ items, subtotal, onSubmitOrder }: OrderCheckoutForm
             defaultValue="bkash"
             value={formData.paymentMethod}
             onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}
-            className="space-y-2"
+            className="space-y-3"
           >
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
               <RadioGroupItem value="bkash" id="bkash" />
-              <Label htmlFor="bkash" className="flex items-center">
-                <img 
-                  src="https://www.bkash.com/sites/all/themes/bkash/logo.png" 
-                  alt="bKash" 
-                  className="h-6 mr-2" 
-                />
-                bKash
+              <Label htmlFor="bkash" className="flex items-center cursor-pointer">
+                <span className="inline-flex items-center justify-center w-10 h-6 rounded bg-pink-500 text-white text-xs font-bold mr-2">
+                  bKash
+                </span>
+                bKash Mobile Banking
               </Label>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
               <RadioGroupItem value="nagad" id="nagad" />
-              <Label htmlFor="nagad" className="flex items-center">
-                <img 
-                  src="https://www.logo.wine/a/logo/Nagad/Nagad-Logo.wine.svg" 
-                  alt="Nagad" 
-                  className="h-6 mr-2" 
-                />
-                Nagad
+              <Label htmlFor="nagad" className="flex items-center cursor-pointer">
+                <span className="inline-flex items-center justify-center w-10 h-6 rounded bg-orange-500 text-white text-xs font-bold mr-2">
+                  নগদ
+                </span>
+                Nagad Mobile Banking
               </Label>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
               <RadioGroupItem value="rocket" id="rocket" />
-              <Label htmlFor="rocket" className="flex items-center">
-                <img 
-                  src="https://www.dutchbanglabank.com/img/rocket.png" 
-                  alt="Rocket" 
-                  className="h-6 mr-2" 
-                />
-                Rocket
+              <Label htmlFor="rocket" className="flex items-center cursor-pointer">
+                <span className="inline-flex items-center justify-center w-10 h-6 rounded bg-purple-600 text-white text-xs font-bold mr-2">
+                  🚀
+                </span>
+                Rocket Mobile Banking
               </Label>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
               <RadioGroupItem value="card" id="card" />
-              <Label htmlFor="card">
+              <Label htmlFor="card" className="flex items-center cursor-pointer">
+                <span className="inline-flex items-center justify-center w-10 h-6 rounded bg-blue-600 text-white text-xs font-bold mr-2">
+                  💳
+                </span>
                 Credit/Debit Card
               </Label>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
               <RadioGroupItem value="cash" id="cash" />
-              <Label htmlFor="cash">
+              <Label htmlFor="cash" className="flex items-center cursor-pointer">
+                <span className="inline-flex items-center justify-center w-10 h-6 rounded bg-green-600 text-white text-xs font-bold mr-2">
+                  💵
+                </span>
                 Cash on Delivery
               </Label>
             </div>
